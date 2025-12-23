@@ -37,6 +37,6 @@ describe("POST /chat", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.message).toBeTruthy();
-    expect(response.body.message.toLowerCase()).toContain("disclaimer");
+    expect(response.body.message.toLowerCase()).not.toContain("disclaimer");
   });
 });

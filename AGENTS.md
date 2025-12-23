@@ -4,7 +4,7 @@ This document defines the high‑level design for the conversational agent (“H
 
 ## Purpose
 
-The Health Coach is an AI‑powered assistant that uses aggregated wearable metrics and user queries to generate personalised insights and suggestions.  It is not a medical device; its outputs are informational and should always include a disclaimer.
+The Health Coach is an AI‑powered assistant that uses aggregated wearable metrics and user queries to generate personalised insights and suggestions.  It is not a medical device; its outputs are informational and should always include a disclaimer shown in the Chat Coach UI banner.
 
 ## Agent capabilities
 
@@ -47,7 +47,7 @@ The agent returns a JSON structure that includes the generated message and optio
 
 ```json
 {
-  "message": "I’m sorry to hear you’ve been feeling tired. Over the past week your average sleep has been 6.5 hours, which is below the 7–9 hour range recommended for adults. Your stress index is also elevated. Consider setting a regular bedtime, practising a 10‑minute relaxation routine before sleep and increasing light physical activity. Your current step average is 8.5 k; aim for 10 k steps and incorporate short walks during breaks.\n\nDisclaimer: This information is for educational purposes and not medical advice.",
+  "message": "I’m sorry to hear you’ve been feeling tired. Over the past week your average sleep has been 6.5 hours, which is below the 7–9 hour range recommended for adults. Your stress index is also elevated. Consider setting a regular bedtime, practising a 10‑minute relaxation routine before sleep and increasing light physical activity. Your current step average is 8.5 k; aim for 10 k steps and incorporate short walks during breaks.",
   "recommendations": [
     {
       "category": "Sleep",
@@ -68,7 +68,7 @@ The agent returns a JSON structure that includes the generated message and optio
 }
 ```
 
-The `recommendations` array is optional; if provided, each entry includes a category and a priority.  The front‑end can render these as checklist items.  The disclaimer is mandatory.
+The `recommendations` array is optional; if provided, each entry includes a category and a priority.  The front‑end can render these as checklist items.  The disclaimer is mandatory and must appear in the Chat Coach UI banner (not appended to each message).
 
 ## Prompt template
 
@@ -80,13 +80,13 @@ The back‑end constructs a prompt that includes:
 
 Example prompt:
 
-> System: You are a health coach that analyses wearable data and offers lifestyle recommendations.  You are not a doctor and must include a disclaimer that your advice is not medical.
+> System: You are a health coach that analyses wearable data and offers lifestyle recommendations.  You are not a doctor and must not provide medical diagnoses or treatment.
 >
 > Data summary: Over the past week, the user averaged 8.5 k steps per day, slept 6.5 hours per night, had an average resting heart rate of 70 bpm, HRV (RMSSD) of 55 ms and stress index of 60/100.  The user is 34‑year‑old male training for a half marathon and aims to improve sleep duration.
 >
 > User: I feel tired after work and my stress is high. How can I improve?
 
-The agent should produce a concise reply (≈2–3 paragraphs) referencing the data summary.
+The agent should produce a fuller reply (≈2–3 paragraphs) referencing the data summary and include brief SMART recommendations.
 
 ## Prompt engineering strategies
 
@@ -130,4 +130,3 @@ Integrating these techniques into the prompt template will improve the relevance
 - **Custom prompts per user goal** – Fine‑tune the agent for specific domains (e.g., stress management vs athletic training) using additional examples.
 - **Multilingual support** – Provide translations of prompts and responses for international users.
 - **Agent analytics** – Log interactions to monitor the types of questions asked and assess the agent’s effectiveness (with user consent).
-

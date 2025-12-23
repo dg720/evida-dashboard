@@ -1,18 +1,5 @@
 const { round } = require("./stats");
 
-const DISCLAIMER_TEXT =
-  "Disclaimer: This information is for educational purposes and not medical advice.";
-
-function ensureDisclaimer(message) {
-  if (!message) {
-    return DISCLAIMER_TEXT;
-  }
-  if (message.toLowerCase().includes("disclaimer")) {
-    return message;
-  }
-  return `${message}\n\n${DISCLAIMER_TEXT}`;
-}
-
 function formatMetric(value, unit) {
   if (value === null || value === undefined) {
     return "not available";
@@ -145,7 +132,7 @@ function buildPrompt({ metrics, userContext, query, stats }) {
     "You are not a doctor and must not provide medical diagnoses or treatments.",
     "Encourage consulting a healthcare professional for persistent or serious issues.",
     "Base your response only on the provided metrics and context. If data is missing, say so.",
-    "Provide SMART recommendations and include a disclaimer that your advice is not medical.",
+    "Provide a fuller response in 2-3 paragraphs plus 2-4 brief SMART recommendations.",
     "Return a JSON object with a `message` string and optional `recommendations` array.",
   ].join(" ");
 
@@ -193,29 +180,26 @@ async function callOpenAI({ systemMessage, userMessage }) {
 
 function parseModelResponse(content) {
   if (!content) {
-    return {
-      message: ensureDisclaimer("I couldn't generate a response at the moment."),
-    };
+    return { message: "I couldn't generate a response at the moment." };
   }
 
   let parsed;
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { message: ensureDisclaimer(content) };
+    return { message: content };
   }
 
   if (!parsed.message) {
-    return { message: ensureDisclaimer(content) };
+    return { message: content };
   }
 
-  const safeMessage = ensureDisclaimer(parsed.message);
   const recommendations = Array.isArray(parsed.recommendations)
     ? parsed.recommendations
     : undefined;
 
   return {
-    message: safeMessage,
+    message: parsed.message,
     recommendations,
   };
 }
@@ -246,10 +230,11 @@ function fallbackResponse({ metrics, userContext }) {
       ? `Given your goals (${goals.join(", ")}), consider a small, measurable change this week.`
       : "Consider a small, measurable change this week.",
     "For example, add a 10-minute walk after lunch or aim for a consistent bedtime for 3 nights.",
+    "You can also track how your energy changes after these adjustments to see what helps most.",
   ].join(" ");
 
   return {
-    message: ensureDisclaimer(message),
+    message,
     recommendations: [
       {
         category: "Sleep",
@@ -284,5 +269,4 @@ async function generateCoachResponse({ metrics, userContext, query, stats }) {
 module.exports = {
   buildPrompt,
   generateCoachResponse,
-  ensureDisclaimer,
 };
