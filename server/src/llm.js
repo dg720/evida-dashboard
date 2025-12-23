@@ -272,9 +272,10 @@ async function generateCoachResponse({ metrics, userContext, query, stats }) {
 
   try {
     const content = await callOpenAI({ systemMessage, userMessage });
-    return parseModelResponse(content);
+    const parsed = parseModelResponse(content);
+    return enrichResponse(parsed, { metrics, userContext });
   } catch {
-    return fallbackResponse({ metrics, userContext });
+    return enrichResponse(fallbackResponse({ metrics, userContext }), { metrics, userContext });
   }
 }
 
@@ -282,3 +283,59 @@ module.exports = {
   buildPrompt,
   generateCoachResponse,
 };
+
+function enrichResponse(response, { metrics, userContext }) {
+  const message = response.message || "";
+  const needsExpansion = message.length < 300;
+  const recommendations = Array.isArray(response.recommendations)
+    ? response.recommendations
+    : [];
+
+  if (!needsExpansion && recommendations.length) {
+    return response;
+  }
+
+  const expandedMessageParts = [message];
+  if (needsExpansion) {
+    const sleep = metrics.average_sleep_hours
+      ? `${metrics.average_sleep_hours} hours/night`
+      : "your recent sleep duration";
+    const steps = metrics.average_steps ? `${metrics.average_steps} steps/day` : "your activity";
+    expandedMessageParts.push(
+      `To support your goals, focus on one or two changes this week tied to ${sleep} and ${steps}. Track how you feel after each change so you can repeat what helps and drop what doesn't.`
+    );
+  }
+
+  const enrichedRecommendations = recommendations.length
+    ? recommendations
+    : [
+        {
+          category: "Sleep",
+          action: "Set a consistent bedtime for 4 nights this week",
+          priority: "high",
+        },
+        {
+          category: "Stress",
+          action: "Practice 5 minutes of slow breathing after work on 3 days",
+          priority: "medium",
+        },
+        {
+          category: "Activity",
+          action: "Add a 15-minute easy walk on 3 days",
+          priority: "low",
+        },
+      ];
+
+  if (!recommendations.length && userContext?.fitness_goal) {
+    enrichedRecommendations.unshift({
+      category: "Training",
+      action: `Schedule 2 easy runs this week to build consistency for ${userContext.fitness_goal}`,
+      priority: "medium",
+    });
+  }
+
+  return {
+    message: expandedMessageParts.filter(Boolean).join("\n\n").trim(),
+    recommendations: enrichedRecommendations,
+  };
+}
