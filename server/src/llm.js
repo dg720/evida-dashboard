@@ -133,6 +133,7 @@ function buildPrompt({ metrics, userContext, query, stats }) {
     "Encourage consulting a healthcare professional for persistent or serious issues.",
     "Base your response only on the provided metrics and context. If data is missing, say so.",
     "Provide a fuller response in 2-3 paragraphs plus 2-4 brief SMART recommendations.",
+    "Do not include a disclaimer in the message; the UI displays it separately.",
     "Return a JSON object with a `message` string and optional `recommendations` array.",
   ].join(" ");
 
@@ -187,11 +188,11 @@ function parseModelResponse(content) {
   try {
     parsed = JSON.parse(content);
   } catch {
-    return { message: content };
+    return { message: stripDisclaimer(content) };
   }
 
   if (!parsed.message) {
-    return { message: content };
+    return { message: stripDisclaimer(content) };
   }
 
   const recommendations = Array.isArray(parsed.recommendations)
@@ -199,9 +200,20 @@ function parseModelResponse(content) {
     : undefined;
 
   return {
-    message: parsed.message,
+    message: stripDisclaimer(parsed.message),
     recommendations,
   };
+}
+
+function stripDisclaimer(message) {
+  if (!message) {
+    return message;
+  }
+  return message
+    .split("\n")
+    .filter((line) => !/disclaimer/i.test(line))
+    .join("\n")
+    .trim();
 }
 
 function fallbackResponse({ metrics, userContext }) {

@@ -43,7 +43,7 @@ The `metrics` dictionary may vary based on available sensors.  The `user_context
 
 ## Outputs
 
-The agent returns a JSON structure that includes the generated message and optional structured recommendations:
+The agent returns a JSON structure that includes the generated message and optional structured recommendations. The message should not embed the disclaimer (the UI banner handles it):
 
 ```json
 {
