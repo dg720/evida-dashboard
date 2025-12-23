@@ -1,0 +1,26 @@
+[
+  {
+    "id": "active-alex",
+    "name": "Active Alex",
+    "description": "Young adult with regular exercise and high daily step count.",
+    "days": 30
+  },
+  {
+    "id": "stressed-sam",
+    "name": "Stressed Sam",
+    "description": "Mid-career professional experiencing high stress and insufficient sleep.",
+    "days": 30
+  },
+  {
+    "id": "sleep-challenged-chris",
+    "name": "Sleep-Challenged Chris",
+    "description": "Individual with insomnia symptoms and fragmented sleep.",
+    "days": 30
+  },
+  {
+    "id": "recovering-riley",
+    "name": "Recovering Riley",
+    "description": "Person recovering from injury with decreasing step count.",
+    "days": 30
+  }
+]
