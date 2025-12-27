@@ -134,8 +134,9 @@ function buildPrompt({ metrics, userContext, query, stats }) {
     "Base your response only on the provided metrics and context. If data is missing, say so.",
     "Format the message with short Markdown section headings in bold.",
     "Use sections: **Summary**, **What stands out**, **Next steps (SMART)**.",
-    "Use bullet points under Next steps (2-4 items).",
-    "Keep sentences concise and actionable.",
+    "Use bullet points under Next steps (2-4 items). Each bullet must be SMART and include a why/how clause.",
+    "Tie each recommendation to a metric or goal in the data summary.",
+    "Keep sentences concise, specific, and actionable.",
     "Do not include a disclaimer in the message; the UI displays it separately.",
     "Return a JSON object with a `message` string and optional `recommendations` array.",
   ].join(" ");
@@ -326,39 +327,84 @@ function enrichResponse(response, { metrics, userContext }) {
 
   const expandedMessageParts = [message];
   if (needsExpansion) {
-    const sleep = metrics.average_sleep_hours
-      ? `${metrics.average_sleep_hours} hours/night`
-      : "your recent sleep duration";
-    const steps = metrics.average_steps ? `${metrics.average_steps} steps/day` : "your activity";
-    const expansion = `- Focus on one change tied to ${sleep} and one tied to ${steps} this week.`;
-    if (/Next steps/i.test(message)) {
-      expandedMessageParts.push(expansion);
-    } else {
-      expandedMessageParts.push(
-        ["**Next steps (SMART)**", expansion].join("\n")
+    const sleepHours = metrics.average_sleep_hours;
+    const steps = metrics.average_steps;
+    const stress = metrics.stress_index;
+    const hrv = metrics.hrv_rmssd;
+    const restingHr = metrics.average_resting_hr;
+
+    const smartBullets = [];
+    if (sleepHours !== undefined && sleepHours !== null) {
+      const target = sleepHours < 7 ? "7.0" : sleepHours < 8 ? "7.5" : "8.0";
+      smartBullets.push(
+        `- **Sleep**: Set a fixed lights-out time to reach ${target}h for 4 nights this week, because your average is ${round(
+          sleepHours,
+          2
+        )}h; use a 20-minute wind-down alarm to make it achievable.`
       );
+    }
+    if (steps !== undefined && steps !== null) {
+      const stepTarget = Math.min(Math.round(steps + 1500), 10000);
+      smartBullets.push(
+        `- **Activity**: Add one 12-minute walk after lunch on 4 days to lift steps toward ${stepTarget}/day, because you are averaging ${round(
+          steps,
+          0
+        )} steps; pair it with a calendar reminder.`
+      );
+    }
+    if (stress !== undefined && stress !== null) {
+      smartBullets.push(
+        `- **Stress**: Do a 5-minute box-breathing reset at 6pm on 3 days to lower your stress index from ${round(
+          stress,
+          1
+        )}/100; start with 4-second inhales/exhales to keep it simple.`
+      );
+    }
+    if (hrv !== undefined && hrv !== null) {
+      smartBullets.push(
+        `- **Recovery**: Add one low-intensity day (easy walk or mobility) this week to support HRV (${round(
+          hrv,
+          1
+        )} ms); keep it under 30 minutes so it doesn't add strain.`
+      );
+    }
+    if (restingHr !== undefined && restingHr !== null && !hrv) {
+      smartBullets.push(
+        `- **Heart health**: Aim for two 20-minute easy sessions this week, because resting HR is ${round(
+          restingHr,
+          1
+        )} bpm; keep effort conversational to encourage recovery.`
+      );
+    }
+
+    if (smartBullets.length) {
+      if (/Next steps/i.test(message)) {
+        expandedMessageParts.push(smartBullets.join("\n"));
+      } else {
+        expandedMessageParts.push(["**Next steps (SMART)**", ...smartBullets].join("\n"));
+      }
     }
   }
 
   const enrichedRecommendations = recommendations.length
     ? recommendations
     : [
-        {
-          category: "Sleep",
-          action: "Set a consistent bedtime for 4 nights this week",
-          priority: "high",
-        },
-        {
-          category: "Stress",
-          action: "Practice 5 minutes of slow breathing after work on 3 days",
-          priority: "medium",
-        },
-        {
-          category: "Activity",
-          action: "Add a 15-minute easy walk on 3 days",
-          priority: "low",
-        },
-      ];
+      {
+        category: "Sleep",
+        action: "Set a consistent bedtime for 4 nights this week",
+        priority: "high",
+      },
+      {
+        category: "Stress",
+        action: "Practice 5 minutes of slow breathing after work on 3 days",
+        priority: "medium",
+      },
+      {
+        category: "Activity",
+        action: "Add a 15-minute easy walk on 3 days",
+        priority: "low",
+      },
+    ];
 
   if (!recommendations.length && userContext?.fitness_goal) {
     enrichedRecommendations.unshift({

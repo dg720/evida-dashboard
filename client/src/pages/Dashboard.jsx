@@ -623,7 +623,7 @@ function Dashboard() {
                   <Tooltip />
                   <Legend
                     content={({ payload }) => (
-                      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                    <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500">
                         {(payload || []).map((entry) => (
                           <div key={entry.value} className="flex items-center gap-2">
                             <span
@@ -650,19 +650,19 @@ function Dashboard() {
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="grid h-full grid-rows-2 gap-4">
+          <div className="grid gap-3">
             <StatCard
               label="Sleep efficiency"
               value={formatNumber(summary?.sleep_efficiency, "")}
               detail="Healthy range: 0.85+"
               accent
-              className="h-full"
+              className="p-4"
             />
             <StatCard
               label="Total sleep (avg)"
               value={formatNumber(summary?.average_sleep_hours, " h")}
               detail="Aim for 7-9 hours"
-              className="h-full"
+              className="p-4"
             />
           </div>
         </div>
