@@ -11,7 +11,7 @@ import jsonschema
 from openai import OpenAI
 
 
-PROMPT_MODULE_PATH = Path(__file__).resolve().parents[1] / "prompt_example"
+PROMPT_MODULE_PATH = Path(__file__).resolve().parent / "prompt_example.py"
 
 
 class PromptModuleError(RuntimeError):
