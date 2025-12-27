@@ -18,7 +18,6 @@ import {
 } from "recharts";
 import { useAppContext } from "../context/AppContext.jsx";
 import SectionHeader from "../components/SectionHeader.jsx";
-import PersonaSelector from "../components/PersonaSelector.jsx";
 import StatCard from "../components/StatCard.jsx";
 import TabButton from "../components/TabButton.jsx";
 import RangeMetricCard from "../components/RangeMetricCard.jsx";
@@ -412,7 +411,6 @@ function Dashboard() {
       <SectionHeader
         title="Dashboard"
         subtitle="Daily trends, recovery signals, and persona comparisons."
-        action={<PersonaSelector />}
       />
 
       <div className="flex flex-wrap gap-3">
