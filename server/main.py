@@ -126,6 +126,19 @@ def build_wearables_summary(user_id: str, window_days: int) -> dict[str, Any]:
         raise KeyError("Persona not found.")
     series = persona_data.get("data", [])
     window = series[-window_days:] if window_days else series
+    stats = compute_stats(
+        window,
+        [
+            "steps",
+            "sleep_hours",
+            "resting_hr",
+            "hrv_rmssd",
+            "stress_index",
+            "calories_burned",
+            "sleep_efficiency",
+            "active_minutes",
+        ],
+    )
     summary = summarize_series(window)
     baseline_summary = summarize_series(series)
     notable_trends = []
