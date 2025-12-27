@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import SectionHeader from "../components/SectionHeader.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
 import { apiFetch, SCRIBE_API_BASE_URL } from "../lib/api.js";
@@ -82,56 +83,33 @@ function ChatCoach() {
     }
   }
 
-  function renderInlineBold(text) {
-    const segments = text.split("**");
-    return segments.map((segment, index) =>
-      index % 2 === 1 ? (
-        <strong key={`bold-${index}`} className="font-semibold text-ink">
-          {segment}
-        </strong>
-      ) : (
-        <span key={`text-${index}`}>{segment}</span>
-      )
-    );
-  }
-
   function renderAssistantMessage(content) {
-    const blocks = content.split(/\n\n+/).filter(Boolean);
-    return blocks.map((block, blockIndex) => {
-      const lines = block.split("\n").filter(Boolean);
-      const hasHeading = lines[0]?.includes("**");
-      const listLines = hasHeading ? lines.slice(1) : lines;
-      const listOnly = listLines.length > 0 && listLines.every((line) => line.trim().startsWith("- "));
-      const isList = lines.every((line) => line.trim().startsWith("- "));
-      if (isList || listOnly) {
-        return (
-          <div key={`list-wrap-${blockIndex}`} className="space-y-2">
-            {hasHeading ? (
-              <p className="text-sm font-semibold text-ink">{renderInlineBold(lines[0])}</p>
-            ) : null}
-            <ul className="space-y-1 pl-4 text-sm text-slate-600">
-              {listLines.map((line, lineIndex) => (
-                <li key={`li-${blockIndex}-${lineIndex}`} className="list-disc">
-                  {renderInlineBold(line.replace(/^\s*-\s*/, ""))}
-                </li>
-              ))}
-            </ul>
-          </div>
-        );
-      }
-      if (lines.length === 1 && /\w+:$/.test(lines[0])) {
-        return (
-          <p key={`heading-${blockIndex}`} className="text-sm font-semibold text-ink">
-            {lines[0]}
-          </p>
-        );
-      }
-      return (
-        <p key={`para-${blockIndex}`} className="text-sm leading-relaxed text-slate-700">
-          {renderInlineBold(lines.join(" "))}
-        </p>
-      );
-    });
+    return (
+      <ReactMarkdown
+        className="space-y-3 text-sm text-slate-700"
+        skipHtml
+        components={{
+          h1: ({ children }) => (
+            <h1 className="text-lg font-semibold text-ink">{children}</h1>
+          ),
+          h2: ({ children }) => (
+            <h2 className="text-base font-semibold text-ink">{children}</h2>
+          ),
+          h3: ({ children }) => (
+            <h3 className="text-sm font-semibold text-ink">{children}</h3>
+          ),
+          p: ({ children }) => <p className="leading-relaxed">{children}</p>,
+          ul: ({ children }) => <ul className="space-y-2 pl-4">{children}</ul>,
+          ol: ({ children }) => (
+            <ol className="list-decimal space-y-4 pl-5">{children}</ol>
+          ),
+          li: ({ children }) => <li className="text-slate-700">{children}</li>,
+          strong: ({ children }) => <strong className="font-semibold text-ink">{children}</strong>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
   }
 
   function buildCoachContent(response) {
