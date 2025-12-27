@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Iterable
 
 
@@ -20,6 +21,13 @@ def variance(values: Iterable[float]) -> float | None:
     return sum((value - avg) ** 2 for value in values) / len(values)
 
 
+def std(values: Iterable[float]) -> float | None:
+    var = variance(values)
+    if var is None:
+        return None
+    return math.sqrt(var)
+
+
 def round_value(value: float | None, digits: int = 2) -> float | None:
     if value is None:
         return None
@@ -38,5 +46,6 @@ def compute_stats(series: list[dict], fields: list[str]) -> dict[str, dict[str, 
         stats[field] = {
             "mean": round_value(mean(values)),
             "variance": round_value(variance(values)),
+            "std": round_value(std(values)),
         }
     return stats
