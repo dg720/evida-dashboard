@@ -73,6 +73,7 @@ def build_prompt_bundle(
     coaching_context: dict[str, Any],
     user_query: str,
     response_schema: dict[str, Any],
+    recent_messages: list[dict[str, Any]] | None = None,
 ):
     prompt_module = load_prompt_module()
     return prompt_module.build_prompt_bundle(
@@ -80,6 +81,7 @@ def build_prompt_bundle(
         coaching_context=coaching_context,
         user_query=user_query,
         response_schema=response_schema,
+        recent_messages=recent_messages or [],
     )
 
 
@@ -88,7 +90,7 @@ def call_llm(bundle, model: str) -> str:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     client = OpenAI(api_key=api_key)
-    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "900"))
+    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "1350"))
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -134,6 +136,7 @@ async def generate_coach_response(
     wearables_summary: dict[str, Any],
     coaching_context: dict[str, Any],
     user_query: str,
+    recent_messages: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     prompt_module = load_prompt_module()
     response_schema = prompt_module.RESPONSE_SCHEMA
@@ -143,6 +146,7 @@ async def generate_coach_response(
         coaching_context=coaching_context,
         user_query=user_query,
         response_schema=response_schema,
+        recent_messages=recent_messages,
     )
 
     try:

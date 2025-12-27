@@ -190,11 +190,37 @@ function ChatCoach() {
       };
     }
     const answer = response.answer || response.message || "";
+    const recommendations = Array.isArray(response.recommendations)
+      ? response.recommendations
+      : [];
+    const nextSteps = recommendations
+      .filter((rec) => rec && typeof rec === "object")
+      .map((rec) => {
+        const action = String(rec.action || "").trim();
+        const why = String(rec.why || "").trim();
+        const timeframe = String(rec.timeframe || "").trim();
+        const success = String(rec.success_metric || "").trim();
+        const priority = String(rec.priority || "").trim();
+        const meta = [];
+        if (why) meta.push(`Why: ${why}`);
+        if (timeframe) meta.push(`Timeframe: ${timeframe}`);
+        if (success) meta.push(`Success: ${success}`);
+        if (priority) meta.push(`Priority: ${priority}`);
+        const suffix = meta.length ? ` — ${meta.join("; ")}` : "";
+        return action ? `${action}${suffix}` : "";
+      })
+      .filter(Boolean);
+    const answerText = String(answer || "").trim() || "No response yet.";
+    const nextStepsText = nextSteps.length
+      ? ["Next steps (SMART):", ...nextSteps.map((step, index) => `${index + 1}. ${step}`)].join(
+          "\n"
+        )
+      : "";
     return {
-      answer: String(answer || "").trim() || "No response yet.",
+      answer: nextStepsText ? `${answerText}\n\n${nextStepsText}` : answerText,
       context: {
         reasoning: Array.isArray(response.reasoning_trace) ? response.reasoning_trace : [],
-        recommendations: Array.isArray(response.recommendations) ? response.recommendations : [],
+        recommendations,
         followUps: Array.isArray(response.follow_ups) ? response.follow_ups : [],
       },
     };
@@ -285,7 +311,8 @@ function ChatCoach() {
       return;
     }
     const userMessage = { role: "user", content: input.trim() };
-    setMessages((prev) => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
@@ -309,6 +336,10 @@ function ChatCoach() {
           query: userMessage.content,
           series,
           meeting_context: meetingPayload,
+          recent_messages: updatedMessages.slice(-5).map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
         }),
       });
       const coachContent = buildCoachContent(response);
@@ -353,6 +384,7 @@ function ChatCoach() {
                 ))}
               </select>
             </div>
+            <div className="hidden flex-1 md:block" />
             <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                 <span className="text-[11px] uppercase tracking-wide text-slate-400">

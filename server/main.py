@@ -442,6 +442,8 @@ def is_valid_chat_payload(body: dict[str, Any]) -> bool:
         return False
     if body.get("series") is not None and not isinstance(body.get("series"), list):
         return False
+    if body.get("recent_messages") is not None and not isinstance(body.get("recent_messages"), list):
+        return False
     return True
 
 
@@ -453,6 +455,7 @@ async def chat(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             return JSONResponse(status_code=400, content={"error": "user_id is required."})
         window_days = int(payload.get("window_days") or 14)
         message = payload.get("message") or ""
+        recent_messages = payload.get("recent_messages") or []
         try:
             wearables_summary = build_wearables_summary(user_id, window_days)
         except KeyError:
@@ -477,6 +480,7 @@ async def chat(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
             wearables_summary=wearables_summary,
             coaching_context=coaching_context,
             user_query=message,
+            recent_messages=recent_messages,
         )
         return response
 
@@ -488,6 +492,7 @@ async def chat(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
     series = payload.get("series")
     window_days = int(payload.get("window_days") or 14)
     meeting_context = payload.get("meeting_context")
+    recent_messages = payload.get("recent_messages") or []
     series_data = series if isinstance(series, list) else []
     wearables_summary = build_wearables_summary_from_series(series_data, window_days)
     coaching_context = (
@@ -509,5 +514,6 @@ async def chat(payload: dict[str, Any] = Body(...)) -> dict[str, Any]:
         wearables_summary=wearables_summary,
         coaching_context=coaching_context,
         user_query=query or "",
+        recent_messages=recent_messages,
     )
     return response
