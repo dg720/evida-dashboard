@@ -372,8 +372,11 @@ function Dashboard() {
     );
   };
 
-  const isActiveAlex = currentPersonaId === "active-alex";
-  const stepsFill = isActiveAlex ? "rgba(34, 197, 94, 0.12)" : "rgba(249, 115, 22, 0.12)";
+  const lineColor = theme?.accent || "#0f766e";
+  const lineFill = hexToRgba(theme?.accent || "#0f766e", 0.12);
+  const stepsFill = lineFill;
+  const stressColor = theme?.accentDeep || "#ef4444";
+  const stressFill = hexToRgba(stressColor, 0.12);
 
   const hexToRgba = (hex, alpha) => {
     if (!hex) {
@@ -563,7 +566,7 @@ function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="steps"
-                        stroke="var(--accent)"
+                        stroke={lineColor}
                         fill={stepsFill}
                         strokeWidth={2}
                       />
@@ -583,8 +586,8 @@ function Dashboard() {
                       <Area
                         type="monotone"
                         dataKey="sleep_hours"
-                        stroke="#0f766e"
-                        fill="rgba(15, 118, 110, 0.12)"
+                        stroke={lineColor}
+                        fill={lineFill}
                         strokeWidth={2}
                       />
                     </AreaChart>
@@ -610,7 +613,7 @@ function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="steps"
-                    stroke="var(--accent)"
+                    stroke={lineColor}
                     fill={stepsFill}
                     strokeWidth={2}
                   />
@@ -630,8 +633,8 @@ function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="active_minutes"
-                    stroke="#0f766e"
-                    fill="rgba(15, 118, 110, 0.12)"
+                    stroke={lineColor}
+                    fill={lineFill}
                     strokeWidth={2}
                   />
                 </AreaChart>
@@ -732,8 +735,8 @@ function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="stress_index"
-                    fill="rgba(239, 68, 68, 0.12)"
-                    stroke="#ef4444"
+                    fill={stressFill}
+                    stroke={stressColor}
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -751,8 +754,8 @@ function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="hrv_rmssd"
-                    fill="rgba(22, 163, 74, 0.12)"
-                    stroke="#16a34a"
+                    fill={lineFill}
+                    stroke={lineColor}
                   />
                 </AreaChart>
               </ResponsiveContainer>
