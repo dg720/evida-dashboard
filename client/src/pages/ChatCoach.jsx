@@ -21,7 +21,6 @@ function ChatCoach() {
   const [meetingError, setMeetingError] = useState("");
   const [activeContext, setActiveContext] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [contextVisibility, setContextVisibility] = useState({});
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -95,73 +94,17 @@ function ChatCoach() {
     );
   }
 
-  function formatRoundedNumbers(text) {
-    return text.replace(/(?<!\d)(\d{1,3}(?:,\d{3})*|\d+)\.(\d+)(?!\d)/g, (match, intPart, frac) => {
-      const normalized = `${intPart}`.replace(/,/g, "");
-      const value = Number(`${normalized}.${frac}`);
-      if (Number.isNaN(value)) {
-        return match;
-      }
-      if (value >= 1000) {
-        return Math.round(value).toLocaleString("en-US");
-      }
-      const rounded = Math.round(value * 10) / 10;
-      return rounded % 1 === 0 ? `${rounded.toFixed(0)}` : `${rounded.toFixed(1)}`;
-    });
-  }
-
-  function formatNumberedLists(text) {
-    const withBreaks = text.replace(/(^|[\s:;])\s*(\d+)[\.\)]\s+/g, "$1\n\n$2. ");
-    return withBreaks.replace(/\n{3,}/g, "\n\n").trim();
-  }
-
-  function collapseNumberedParagraphs(text) {
-    return text.replace(/(\d+\.[^\n]*)\n\n(\d+\.\s+)/g, "$1\n$2");
-  }
-
-  function formatActionBlocks(text) {
-    const skipLabels = /(Why:|Success Metric:|Timeframe:|Action Plan:|Next steps|Follow-up questions)/i;
-    return text.replace(/\s+([A-Z][^:\n]{3,}:\s)/g, (match, label) =>
-      skipLabels.test(label) ? match : `\n\n${label}`
-    );
-  }
-
-  function normalizeAssistantText(text) {
-    const withRounded = formatRoundedNumbers(text);
-    const withLists = formatNumberedLists(withRounded);
-    return collapseNumberedParagraphs(formatActionBlocks(withLists));
-  }
-
   function renderAssistantMessage(content) {
-    const normalizedContent = normalizeAssistantText(content);
-    const blocks = normalizedContent.split(/\n\n+/).filter(Boolean);
+    const blocks = content.split(/\n\n+/).filter(Boolean);
     return blocks.map((block, blockIndex) => {
       const lines = block.split("\n").filter(Boolean);
-      const numberedOnly =
-        lines.length > 0 &&
-        lines.every((line) => /^\d+\.\s+/.test(line.trim()) || /^\d+\)\s+/.test(line.trim()));
       const hasHeading = lines[0]?.includes("**");
       const listLines = hasHeading ? lines.slice(1) : lines;
       const listOnly = listLines.length > 0 && listLines.every((line) => line.trim().startsWith("- "));
       const isList = lines.every((line) => line.trim().startsWith("- "));
-      const blockClass = blockIndex ? "mt-3" : "";
-      if (numberedOnly) {
-        return (
-          <ol
-            key={`num-list-${blockIndex}`}
-            className={`list-decimal space-y-3 pl-5 text-sm text-slate-700 ${blockClass}`}
-          >
-            {lines.map((line, lineIndex) => (
-              <li key={`num-${blockIndex}-${lineIndex}`}>
-                {renderInlineBold(line.replace(/^\s*\d+\.\s*/, ""))}
-              </li>
-            ))}
-          </ol>
-        );
-      }
       if (isList || listOnly) {
         return (
-          <div key={`list-wrap-${blockIndex}`} className={`space-y-2 ${blockClass}`}>
+          <div key={`list-wrap-${blockIndex}`} className="space-y-2">
             {hasHeading ? (
               <p className="text-sm font-semibold text-ink">{renderInlineBold(lines[0])}</p>
             ) : null}
@@ -177,129 +120,71 @@ function ChatCoach() {
       }
       if (lines.length === 1 && /\w+:$/.test(lines[0])) {
         return (
-          <p
-            key={`heading-${blockIndex}`}
-            className={`text-sm font-semibold text-ink ${blockClass}`}
-          >
+          <p key={`heading-${blockIndex}`} className="text-sm font-semibold text-ink">
             {lines[0]}
           </p>
         );
       }
       return (
-        <p
-          key={`para-${blockIndex}`}
-          className={`text-sm leading-relaxed text-slate-700 ${blockClass}`}
-        >
+        <p key={`para-${blockIndex}`} className="text-sm leading-relaxed text-slate-700">
           {renderInlineBold(lines.join(" "))}
         </p>
       );
     });
   }
 
-  function buildCoachContent(response) {
+  function formatCoachResponse(response) {
     if (!response || typeof response !== "object") {
-      return {
-        answer: "No response yet.",
-        context: { reasoning: [], recommendations: [], followUps: [] },
-      };
+      return "No response yet.";
     }
+    const sections = [];
     const answer = response.answer || response.message || "";
-    const recommendations = Array.isArray(response.recommendations) ? response.recommendations : [];
-    const followUps = Array.isArray(response.follow_ups) ? response.follow_ups : [];
-    const answerText = String(answer || "").trim() || "No response yet.";
-    const followUpsText = followUps.length
-      ? ["Follow-up questions:", ...followUps.map((item, index) => `${index + 1}. ${item}`)].join(
-          "\n"
-        )
-      : "";
-    return {
-      answer: followUpsText ? `${answerText}\n\n${followUpsText}` : answerText,
-      context: {
-        reasoning: Array.isArray(response.reasoning_trace) ? response.reasoning_trace : [],
-        recommendations,
-        followUps,
-      },
-    };
-  }
+    if (String(answer).trim()) {
+      sections.push(String(answer).trim());
+    }
 
-  function renderContextSection({ reasoning, recommendations, followUps }) {
-    const hasReasoning = reasoning.some((line) => String(line).trim());
-    const hasRecommendations = recommendations.some((rec) => rec && typeof rec === "object");
-    const hasFollowUps = followUps.some((line) => String(line).trim());
+    if (Array.isArray(response.reasoning_trace) && response.reasoning_trace.length) {
+      const lines = response.reasoning_trace
+        .filter((line) => String(line).trim())
+        .map((line) => `- ${String(line).trim()}`);
+      if (lines.length) {
+        sections.push(["**What I'm seeing**", ...lines].join("\n"));
+      }
+    }
 
-    return (
-      <div className="mt-3 space-y-4 border-t border-slate-200/70 pt-3 text-sm text-slate-600">
-        {hasReasoning ? (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              What I'm seeing
-            </p>
-            <ul className="space-y-1 pl-4 text-sm text-slate-600">
-              {reasoning
-                .filter((line) => String(line).trim())
-                .map((line, index) => (
-                  <li key={`reason-${index}`} className="list-disc">
-                    {String(line).trim()}
-                  </li>
-                ))}
-            </ul>
-          </div>
-        ) : null}
+    if (Array.isArray(response.recommendations) && response.recommendations.length) {
+      const lines = response.recommendations
+        .filter((rec) => rec && typeof rec === "object")
+        .map((rec) => {
+          const action = String(rec.action || "").trim();
+          const why = String(rec.why || "").trim();
+          const timeframe = String(rec.timeframe || "").trim();
+          const success = String(rec.success_metric || "").trim();
+          const priority = String(rec.priority || "").trim();
+          const meta = [];
+          if (priority) meta.push(priority);
+          if (timeframe) meta.push(timeframe);
+          if (success) meta.push(`Success: ${success}`);
+          if (why) meta.push(why);
+          const suffix = meta.length ? ` — ${meta.join("; ")}` : "";
+          return action ? `- ${action}${suffix}` : "";
+        })
+        .filter(Boolean);
+      if (lines.length) {
+        sections.push(["**Next steps (SMART)**", ...lines].join("\n"));
+      }
+    }
 
-        {hasRecommendations ? (
-          <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Next steps (SMART)
-            </p>
-            <div className="space-y-3">
-              {recommendations
-                .filter((rec) => rec && typeof rec === "object")
-                .map((rec, index) => {
-                  const action = String(rec.action || "").trim();
-                  const why = String(rec.why || "").trim();
-                  const timeframe = String(rec.timeframe || "").trim();
-                  const success = String(rec.success_metric || "").trim();
-                  const priority = String(rec.priority || "").trim();
-                  return (
-                    <div key={`rec-${index}`} className="space-y-1">
-                      {action ? (
-                        <p className="text-sm font-semibold text-ink">{action}</p>
-                      ) : null}
-                      {why ? <p className="text-xs text-slate-500">Why: {why}</p> : null}
-                      {timeframe ? (
-                        <p className="text-xs text-slate-500">Timeframe: {timeframe}</p>
-                      ) : null}
-                      {success ? (
-                        <p className="text-xs text-slate-500">Success metric: {success}</p>
-                      ) : null}
-                      {priority ? (
-                        <p className="text-xs text-slate-500">Priority: {priority}</p>
-                      ) : null}
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        ) : null}
+    if (Array.isArray(response.follow_ups) && response.follow_ups.length) {
+      const lines = response.follow_ups
+        .filter((line) => String(line).trim())
+        .map((line) => `- ${String(line).trim()}`);
+      if (lines.length) {
+        sections.push(["**Follow-up questions**", ...lines].join("\n"));
+      }
+    }
 
-        {hasFollowUps ? (
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Follow-up questions
-            </p>
-            <ul className="space-y-1 pl-4 text-sm text-slate-600">
-              {followUps
-                .filter((line) => String(line).trim())
-                .map((line, index) => (
-                  <li key={`follow-${index}`} className="list-disc">
-                    {String(line).trim()}
-                  </li>
-                ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    );
+    return sections.length ? sections.join("\n\n") : "No response yet.";
   }
 
   async function handleSend() {
@@ -307,8 +192,7 @@ function ChatCoach() {
       return;
     }
     const userMessage = { role: "user", content: input.trim() };
-    const updatedMessages = [...messages, userMessage];
-    setMessages(updatedMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
@@ -332,16 +216,12 @@ function ChatCoach() {
           query: userMessage.content,
           series,
           meeting_context: meetingPayload,
-          recent_messages: updatedMessages.slice(-5).map((message) => ({
-            role: message.role,
-            content: message.content,
-          })),
         }),
       });
-      const coachContent = buildCoachContent(response);
+      const formattedResponse = formatCoachResponse(response);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: coachContent.answer, context: coachContent.context },
+        { role: "assistant", content: formattedResponse },
       ]);
     } catch {
       setMessages((prev) => [
@@ -488,35 +368,9 @@ function ChatCoach() {
                     : "bg-accent text-white",
                 ].join(" ")}
               >
-                {message.role === "assistant" ? (
-                  <>
-                    {renderAssistantMessage(message.content)}
-                    {message.context &&
-                    (message.context.reasoning?.length ||
-                      message.context.recommendations?.length ||
-                      message.context.followUps?.length) ? (
-                      <div className="mt-3">
-                        <button
-                          type="button"
-                          className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500"
-                          onClick={() =>
-                            setContextVisibility((prev) => ({
-                              ...prev,
-                              [index]: !prev[index],
-                            }))
-                          }
-                        >
-                          {contextVisibility[index] ? "Hide context" : "Context"}
-                        </button>
-                        {contextVisibility[index]
-                          ? renderContextSection(message.context)
-                          : null}
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  message.content
-                )}
+                {message.role === "assistant"
+                  ? renderAssistantMessage(message.content)
+                  : message.content}
               </div>
             </div>
           ))}
