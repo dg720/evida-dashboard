@@ -696,18 +696,23 @@ function Dashboard() {
             </div>
           </div>
           <div className="grid gap-3">
-            <StatCard
+            <RangeMetricCard
               label="Sleep efficiency"
               value={formatNumber(summary?.sleep_efficiency, "")}
+              unit=""
+              status="target"
+              percentile={Math.min((summary?.sleep_efficiency || 0) * 100, 100)}
               detail="Healthy range: 0.85+"
-              accent
-              className="p-4"
+              hideTrend
             />
-            <StatCard
+            <RangeMetricCard
               label="Total sleep (avg)"
               value={formatNumber(summary?.average_sleep_hours, " h")}
+              unit=""
+              status={summary?.average_sleep_hours >= 7 ? "target" : "low"}
+              percentile={Math.min(((summary?.average_sleep_hours || 0) / 9) * 100, 100)}
               detail="Aim for 7-9 hours"
-              className="p-4"
+              hideTrend
             />
           </div>
         </div>
