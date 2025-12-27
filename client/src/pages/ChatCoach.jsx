@@ -91,8 +91,34 @@ function ChatCoach() {
     );
   }
 
+  function formatRoundedNumbers(text) {
+    return text.replace(/(?<!\d)(\d{1,3}(?:,\d{3})*|\d+)\.(\d+)(?!\d)/g, (match, intPart, frac) => {
+      const normalized = `${intPart}`.replace(/,/g, "");
+      const value = Number(`${normalized}.${frac}`);
+      if (Number.isNaN(value)) {
+        return match;
+      }
+      if (value >= 1000) {
+        return Math.round(value).toLocaleString("en-US");
+      }
+      const rounded = Math.round(value * 10) / 10;
+      return rounded % 1 === 0 ? `${rounded.toFixed(0)}` : `${rounded.toFixed(1)}`;
+    });
+  }
+
+  function formatNumberedLists(text) {
+    const withBreaks = text.replace(/(\s|^)(\d+)\.\s+/g, "\n\n$2. ");
+    return withBreaks.replace(/\n{3,}/g, "\n\n").trim();
+  }
+
+  function normalizeAssistantText(text) {
+    const withRounded = formatRoundedNumbers(text);
+    return formatNumberedLists(withRounded);
+  }
+
   function renderAssistantMessage(content) {
-    const blocks = content.split(/\n\n+/).filter(Boolean);
+    const normalizedContent = normalizeAssistantText(content);
+    const blocks = normalizedContent.split(/\n\n+/).filter(Boolean);
     return blocks.map((block, blockIndex) => {
       const lines = block.split("\n").filter(Boolean);
       const hasHeading = lines[0]?.includes("**");
@@ -284,42 +310,49 @@ function ChatCoach() {
         title="Health Coach"
         subtitle="Uses your wearable data and uploaded coaching sessions for context."
         action={
-          <div className="flex items-center gap-2">
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 md:flex">
-              <span className="text-[11px] uppercase tracking-wide text-slate-400">Persona</span>
-              <select
-                value={currentPersonaId || ""}
-                onChange={(event) => setCurrentPersonaId(event.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
-              >
-                {personas.map((persona) => (
-                  <option key={persona.id} value={persona.id}>
-                    {persona.name}
-                  </option>
-                ))}
-              </select>
+          <div className="grid w-full grid-cols-1 items-center gap-3 md:grid-cols-3">
+            <div className="hidden md:block" />
+            <div className="flex justify-center">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                  Persona
+                </span>
+                <select
+                  value={currentPersonaId || ""}
+                  onChange={(event) => setCurrentPersonaId(event.target.value)}
+                  className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+                >
+                  {personas.map((persona) => (
+                    <option key={persona.id} value={persona.id}>
+                      {persona.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            {activeContext ? (
+            <div className="flex items-center justify-center gap-2 md:justify-end">
+              {activeContext ? (
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
+                  onClick={() => setActiveContext(null)}
+                >
+                  Clear context
+                </button>
+              ) : null}
               <button
                 type="button"
-                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
-                onClick={() => setActiveContext(null)}
+                className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
+                onClick={() => {
+                  setShowImporter((prev) => !prev);
+                  if (!meetingOptions.length) {
+                    loadMeetings();
+                  }
+                }}
               >
-                Clear context
+                Import meeting
               </button>
-            ) : null}
-            <button
-              type="button"
-              className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
-              onClick={() => {
-                setShowImporter((prev) => !prev);
-                if (!meetingOptions.length) {
-                  loadMeetings();
-                }
-              }}
-            >
-              Import meeting
-            </button>
+            </div>
           </div>
         }
       />

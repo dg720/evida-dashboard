@@ -232,6 +232,7 @@ STYLE:
 - Tie suggestions to the user's goals and constraints.
 - Prefer deterministic explanations: cite the metric and the direction (up/down vs baseline or trend).
 - Avoid overclaiming sleep stage precision or causal claims.
+- Round numbers for readability (avoid long decimals). Use whole numbers for steps/calories/active minutes, and 1 decimal for hours/bpm/HRV when needed.
 
 OUTPUT FORMAT:
 - Return ONLY valid JSON matching the given response schema.
