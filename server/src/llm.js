@@ -132,7 +132,10 @@ function buildPrompt({ metrics, userContext, query, stats }) {
     "You are not a doctor and must not provide medical diagnoses or treatments.",
     "Encourage consulting a healthcare professional for persistent or serious issues.",
     "Base your response only on the provided metrics and context. If data is missing, say so.",
-    "Provide a fuller response in 2-3 paragraphs plus 2-4 brief SMART recommendations.",
+    "Format the message with short Markdown section headings in bold.",
+    "Use sections: **Summary**, **What stands out**, **Next steps (SMART)**.",
+    "Use bullet points under Next steps (2-4 items).",
+    "Keep sentences concise and actionable.",
     "Do not include a disclaimer in the message; the UI displays it separately.",
     "Return a JSON object with a `message` string and optional `recommendations` array.",
   ].join(" ");
@@ -237,13 +240,19 @@ function fallbackResponse({ metrics, userContext }) {
   }
 
   const message = [
+    "**Summary**",
     `Based on your recent metrics, your activity is ${steps}, sleep is ${sleep}, and ${stress}.`,
+    "",
+    "**What stands out**",
     goals.length
-      ? `Given your goals (${goals.join(", ")}), consider a small, measurable change this week.`
-      : "Consider a small, measurable change this week.",
-    "For example, add a 10-minute walk after lunch or aim for a consistent bedtime for 3 nights.",
-    "You can also track how your energy changes after these adjustments to see what helps most.",
-  ].join(" ");
+      ? `Your goals include ${goals.join(", ")}, so small changes linked to sleep and activity will have the biggest impact.`
+      : "Small changes linked to sleep and activity will have the biggest impact.",
+    "",
+    "**Next steps (SMART)**",
+    "- Set a consistent bedtime for 3 nights this week.",
+    "- Add a 10-minute walk after lunch on 3 days.",
+    "- Track energy and stress after each change to see what helps most.",
+  ].join("\n");
 
   return {
     message,
@@ -301,9 +310,14 @@ function enrichResponse(response, { metrics, userContext }) {
       ? `${metrics.average_sleep_hours} hours/night`
       : "your recent sleep duration";
     const steps = metrics.average_steps ? `${metrics.average_steps} steps/day` : "your activity";
-    expandedMessageParts.push(
-      `To support your goals, focus on one or two changes this week tied to ${sleep} and ${steps}. Track how you feel after each change so you can repeat what helps and drop what doesn't.`
-    );
+    const expansion = `- Focus on one change tied to ${sleep} and one tied to ${steps} this week.`;
+    if (/Next steps/i.test(message)) {
+      expandedMessageParts.push(expansion);
+    } else {
+      expandedMessageParts.push(
+        ["**Next steps (SMART)**", expansion].join("\n")
+      );
+    }
   }
 
   const enrichedRecommendations = recommendations.length

@@ -20,6 +20,58 @@ function ChatCoach() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  function renderInlineBold(text) {
+    const segments = text.split("**");
+    return segments.map((segment, index) =>
+      index % 2 === 1 ? (
+        <strong key={`bold-${index}`} className="font-semibold text-ink">
+          {segment}
+        </strong>
+      ) : (
+        <span key={`text-${index}`}>{segment}</span>
+      )
+    );
+  }
+
+  function renderAssistantMessage(content) {
+    const blocks = content.split(/\n\n+/).filter(Boolean);
+    return blocks.map((block, blockIndex) => {
+      const lines = block.split("\n").filter(Boolean);
+      const hasHeading = lines[0]?.includes("**");
+      const listLines = hasHeading ? lines.slice(1) : lines;
+      const listOnly = listLines.length > 0 && listLines.every((line) => line.trim().startsWith("- "));
+      const isList = lines.every((line) => line.trim().startsWith("- "));
+      if (isList || listOnly) {
+        return (
+          <div key={`list-wrap-${blockIndex}`} className="space-y-2">
+            {hasHeading ? (
+              <p className="text-sm font-semibold text-ink">{renderInlineBold(lines[0])}</p>
+            ) : null}
+            <ul className="space-y-1 pl-4 text-sm text-slate-600">
+              {listLines.map((line, lineIndex) => (
+                <li key={`li-${blockIndex}-${lineIndex}`} className="list-disc">
+                  {renderInlineBold(line.replace(/^\s*-\s*/, ""))}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      }
+      if (lines.length === 1 && /\w+:$/.test(lines[0])) {
+        return (
+          <p key={`heading-${blockIndex}`} className="text-sm font-semibold text-ink">
+            {lines[0]}
+          </p>
+        );
+      }
+      return (
+        <p key={`para-${blockIndex}`} className="text-sm leading-relaxed text-slate-700">
+          {renderInlineBold(lines.join(" "))}
+        </p>
+      );
+    });
+  }
+
   async function handleSend() {
     if (!input.trim()) {
       return;
@@ -70,18 +122,29 @@ function ChatCoach() {
             <div
               key={`${message.role}-${index}`}
               className={[
-                "max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
-                message.role === "assistant"
-                  ? "bg-white text-slate-700"
-                  : "ml-auto bg-accent text-white",
+                "flex",
+                message.role === "assistant" ? "justify-start" : "justify-end",
               ].join(" ")}
             >
-              {message.content}
+              <div
+                className={[
+                  "w-fit max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm",
+                  message.role === "assistant"
+                    ? "border border-slate-200/70 bg-white/90 text-slate-700"
+                    : "bg-accent text-white",
+                ].join(" ")}
+              >
+                {message.role === "assistant"
+                  ? renderAssistantMessage(message.content)
+                  : message.content}
+              </div>
             </div>
           ))}
           {loading ? (
-            <div className="max-w-[70%] rounded-2xl bg-white px-4 py-3 text-sm text-slate-500">
-              Coach is typing...
+            <div className="flex justify-start">
+              <div className="w-fit max-w-[70%] rounded-2xl border border-slate-200/70 bg-white/90 px-4 py-3 text-sm text-slate-500">
+                Coach is typing...
+              </div>
             </div>
           ) : null}
           <div ref={bottomRef} />

@@ -240,6 +240,60 @@ function Dashboard() {
     });
   }, [summary, trends]);
 
+  const insights = useMemo(() => {
+    const baseline = {
+      steps: 8000,
+      sleep: 7.5,
+      stress: 40,
+      restingHr: 65,
+      hrv: 50,
+    };
+
+    const messages = [];
+    if (summary?.average_steps !== undefined) {
+      const delta = Math.round(summary.average_steps - baseline.steps);
+      messages.push({
+        title: delta < 0 ? "Steps are below baseline" : "Steps are above baseline",
+        body:
+          delta < 0
+            ? `You're about ${Math.abs(delta)} steps/day under the benchmark. Add a 10-15 minute walk to close the gap.`
+            : `You're roughly ${delta} steps/day above baseline. Keep the momentum with a short walk on low-energy days.`,
+      });
+    }
+    if (summary?.average_sleep_hours !== undefined) {
+      const delta = Number((summary.average_sleep_hours - baseline.sleep).toFixed(1));
+      messages.push({
+        title: delta < 0 ? "Sleep duration needs a lift" : "Sleep duration is strong",
+        body:
+          delta < 0
+            ? `You're about ${Math.abs(delta)}h below the baseline. Try a consistent wind-down to recover more fully.`
+            : `You're about ${delta}h above baseline. Protect this streak with consistent bedtimes.`,
+      });
+    }
+    if (summary?.stress_index !== undefined) {
+      const delta = Math.round(summary.stress_index - baseline.stress);
+      messages.push({
+        title: delta > 0 ? "Stress is running higher" : "Stress is running lower",
+        body:
+          delta > 0
+            ? `You're roughly ${delta} points above baseline. Schedule a 5-minute reset after work to calm recovery.`
+            : `You're about ${Math.abs(delta)} points below baseline. Maintain the habits keeping stress lower.`,
+      });
+    }
+    if (summary?.hrv_rmssd !== undefined) {
+      const delta = Math.round(summary.hrv_rmssd - baseline.hrv);
+      messages.push({
+        title: delta > 0 ? "HRV is trending stronger" : "HRV is trending lower",
+        body:
+          delta > 0
+            ? `Your HRV is about ${delta} ms above baseline. Keep sleep timing steady to maintain recovery.`
+            : `Your HRV is about ${Math.abs(delta)} ms below baseline. Add a lighter training day to recover.`,
+      });
+    }
+
+    return messages.slice(0, 2);
+  }, [summary]);
+
   const formatRounded = (value) => {
     if (value === null || value === undefined) {
       return "--";
@@ -547,7 +601,16 @@ function Dashboard() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
                   <Tooltip />
-                  <Legend />
+                  <Legend
+                    formatter={(value) => {
+                      const labels = {
+                        sleep_stage_light: "Light sleep",
+                        sleep_stage_deep: "Deep sleep",
+                        sleep_stage_rem: "REM sleep",
+                      };
+                      return labels[value] || value;
+                    }}
+                  />
                   <Bar dataKey="sleep_stage_light" stackId="sleep" fill="var(--accent-soft)" />
                   <Bar dataKey="sleep_stage_deep" stackId="sleep" fill="var(--accent-deep)" />
                   <Bar dataKey="sleep_stage_rem" stackId="sleep" fill="var(--accent)" />
@@ -674,21 +737,19 @@ function Dashboard() {
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-6 grid gap-4 md:grid-cols-2">
-                <div className="glass-card rounded-2xl p-4">
-                  <p className="text-sm font-semibold text-ink">Steps are below baseline</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    You are averaging fewer steps than the benchmark range. Aim for one extra
-                    15-minute walk to close the gap.
-                  </p>
-                </div>
-                <div className="glass-card rounded-2xl p-4">
-                  <p className="text-sm font-semibold text-ink">HRV is trending stronger</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    Higher HRV suggests better recovery versus baseline. Maintain consistent sleep
-                    timing to keep momentum.
-                  </p>
-                </div>
+              <div className="mt-6 space-y-4">
+                {insights.map((insight) => (
+                  <div
+                    key={insight.title}
+                    className="rounded-2xl border border-slate-200/70 bg-white/90 p-4 shadow-sm"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Personalized insight
+                    </p>
+                    <p className="mt-2 text-sm font-semibold text-ink">{insight.title}</p>
+                    <p className="mt-2 text-xs text-slate-500">{insight.body}</p>
+                  </div>
+                ))}
               </div>
             </div>
             <div className="grid gap-4">
