@@ -75,7 +75,6 @@ function ChatCoach() {
       }
       const detail = await response.json();
       setActiveContext(detail);
-      setShowImporter(false);
     } catch (error) {
       setMeetingError(error.message || "Unable to import meeting.");
     } finally {
@@ -126,13 +125,29 @@ function ChatCoach() {
     const blocks = normalizedContent.split(/\n\n+/).filter(Boolean);
     return blocks.map((block, blockIndex) => {
       const lines = block.split("\n").filter(Boolean);
+      const numberedOnly = lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line.trim()));
       const hasHeading = lines[0]?.includes("**");
       const listLines = hasHeading ? lines.slice(1) : lines;
       const listOnly = listLines.length > 0 && listLines.every((line) => line.trim().startsWith("- "));
       const isList = lines.every((line) => line.trim().startsWith("- "));
+      const blockClass = blockIndex ? "mt-3" : "";
+      if (numberedOnly) {
+        return (
+          <ol
+            key={`num-list-${blockIndex}`}
+            className={`list-decimal space-y-3 pl-5 text-sm text-slate-700 ${blockClass}`}
+          >
+            {lines.map((line, lineIndex) => (
+              <li key={`num-${blockIndex}-${lineIndex}`}>
+                {renderInlineBold(line.replace(/^\s*\d+\.\s*/, ""))}
+              </li>
+            ))}
+          </ol>
+        );
+      }
       if (isList || listOnly) {
         return (
-          <div key={`list-wrap-${blockIndex}`} className="space-y-2">
+          <div key={`list-wrap-${blockIndex}`} className={`space-y-2 ${blockClass}`}>
             {hasHeading ? (
               <p className="text-sm font-semibold text-ink">{renderInlineBold(lines[0])}</p>
             ) : null}
@@ -148,13 +163,19 @@ function ChatCoach() {
       }
       if (lines.length === 1 && /\w+:$/.test(lines[0])) {
         return (
-          <p key={`heading-${blockIndex}`} className="text-sm font-semibold text-ink">
+          <p
+            key={`heading-${blockIndex}`}
+            className={`text-sm font-semibold text-ink ${blockClass}`}
+          >
             {lines[0]}
           </p>
         );
       }
       return (
-        <p key={`para-${blockIndex}`} className="text-sm leading-relaxed text-slate-700">
+        <p
+          key={`para-${blockIndex}`}
+          className={`text-sm leading-relaxed text-slate-700 ${blockClass}`}
+        >
           {renderInlineBold(lines.join(" "))}
         </p>
       );
@@ -315,7 +336,7 @@ function ChatCoach() {
         title="Health Coach"
         subtitle="Uses your wearable data and uploaded coaching sessions for context."
         action={
-          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
               <span className="text-[11px] uppercase tracking-wide text-slate-400">
                 Persona
@@ -332,7 +353,7 @@ function ChatCoach() {
                 ))}
               </select>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                 <span className="text-[11px] uppercase tracking-wide text-slate-400">
                   Meeting
