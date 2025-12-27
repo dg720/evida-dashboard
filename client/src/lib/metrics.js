@@ -56,3 +56,22 @@ export function computeSleepScore(summary) {
   const efficiencyScore = Math.min(efficiency * 100, 100);
   return Math.round((durationScore * 0.6 + efficiencyScore * 0.4) * 10) / 10;
 }
+
+export function computeHeartHealthScore(personaId, summary) {
+  const baseScores = {
+    "active-alex": 86,
+    "stressed-sam": 64,
+    "sleep-challenged-chris": 61,
+    "recovering-riley": 72,
+  };
+  const base = baseScores[personaId] ?? 70;
+  if (!summary) {
+    return base;
+  }
+  const restingHr = summary.average_resting_hr || 0;
+  const hrv = summary.hrv_rmssd || 0;
+  const hrScore = restingHr ? Math.max(0, 100 - (restingHr - 50) * 1.6) : 60;
+  const hrvScore = hrv ? Math.min((hrv / 70) * 100, 100) : 60;
+  const blended = base * 0.55 + (hrScore * 0.25 + hrvScore * 0.2);
+  return Math.round(blended * 10) / 10;
+}

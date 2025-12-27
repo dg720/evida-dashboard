@@ -25,18 +25,30 @@ import PersonaSelector from "../components/PersonaSelector.jsx";
 import StatCard from "../components/StatCard.jsx";
 import TabButton from "../components/TabButton.jsx";
 import RangeMetricCard from "../components/RangeMetricCard.jsx";
-import { computeReadiness, computeSleepScore, formatNumber, getLatestDays, groupByWeek } from "../lib/metrics.js";
+import FocusScoreCard from "../components/FocusScoreCard.jsx";
+import {
+  computeHeartHealthScore,
+  computeReadiness,
+  computeSleepScore,
+  formatNumber,
+  getLatestDays,
+  groupByWeek,
+} from "../lib/metrics.js";
 
 const tabs = ["Overview", "Activity", "Sleep", "Stress & Recovery", "Comparison"];
 
 function Dashboard() {
-  const { series, summary } = useAppContext();
+  const { series, summary, currentPersonaId } = useAppContext();
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
   const latestSeries = useMemo(() => getLatestDays(series, 14), [series]);
   const weeklySteps = useMemo(() => groupByWeek(series), [series]);
   const readiness = useMemo(() => computeReadiness(summary), [summary]);
   const sleepScore = useMemo(() => computeSleepScore(summary), [summary]);
+  const heartHealthScore = useMemo(
+    () => computeHeartHealthScore(currentPersonaId, summary),
+    [currentPersonaId, summary]
+  );
 
   if (!series.length) {
     return (
@@ -231,6 +243,20 @@ function Dashboard() {
     });
   }, [summary, trends]);
 
+  const formatRounded = (value) => {
+    if (value === null || value === undefined) {
+      return "--";
+    }
+    return Math.round(value);
+  };
+
+  const formatOneDecimal = (value) => {
+    if (value === null || value === undefined) {
+      return "--";
+    }
+    return Number(value).toFixed(1);
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -255,29 +281,33 @@ function Dashboard() {
               </p>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <StatCard
+              <FocusScoreCard
                 label="Sleep score"
-                value={formatNumber(sleepScore, "/100")}
-                detail="Based on sleep duration + efficiency"
-                accent
+                score={sleepScore}
+                caption="Higher than usual"
+                helper="Based on sleep duration + efficiency."
+                accentColor="#0f766e"
               />
-              <StatCard
-                label="Resting HR"
-                value={formatNumber(summary?.average_resting_hr, " bpm")}
-                detail="Lower is typically better"
-                accent
+              <FocusScoreCard
+                label="Heart health"
+                score={heartHealthScore}
+                caption="Steady baseline"
+                helper="Synthesized from recovery signals."
+                accentColor="#22c55e"
               />
-              <StatCard
+              <FocusScoreCard
                 label="Stress index"
-                value={formatNumber(summary?.stress_index, "/100")}
-                detail="Lower is calmer"
-                accent
+                score={summary?.stress_index ? Math.round(summary.stress_index) : null}
+                caption="Lower is calmer"
+                helper="Track workload and recovery balance."
+                accentColor="#ef4444"
               />
-              <StatCard
+              <FocusScoreCard
                 label="Recovery readiness"
-                value={formatNumber(readiness, "")}
-                detail="Composite recovery score"
-                accent
+                score={readiness ? Math.round(readiness) : null}
+                caption="Resilient"
+                helper="Composite recovery indicator."
+                accentColor="#f97316"
               />
             </div>
           </section>
@@ -292,27 +322,27 @@ function Dashboard() {
             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
               <StatCard
                 label="Daily steps"
-                value={formatNumber(summary?.average_steps, "")}
+                value={formatNumber(formatRounded(summary?.average_steps), "")}
                 detail="Target: 8-10k steps/day"
               />
               <StatCard
                 label="Sleep duration"
-                value={formatNumber(summary?.average_sleep_hours, " h")}
+                value={formatNumber(formatOneDecimal(summary?.average_sleep_hours), " h")}
                 detail="Recommended: 7-9 hours"
               />
               <StatCard
                 label="Calories burned"
-                value={formatNumber(summary?.calories_burned, " kcal")}
+                value={formatNumber(formatRounded(summary?.calories_burned), " kcal")}
                 detail="Daily energy output"
               />
               <StatCard
                 label="Active minutes"
-                value={formatNumber(summary?.active_minutes, " min")}
+                value={formatNumber(formatRounded(summary?.active_minutes), " min")}
                 detail="Movement across the day"
               />
               <StatCard
                 label="HRV (RMSSD)"
-                value={formatNumber(summary?.hrv_rmssd, " ms")}
+                value={formatNumber(formatRounded(summary?.hrv_rmssd), " ms")}
                 detail="Higher is typically better"
               />
             </div>
