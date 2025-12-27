@@ -18,13 +18,13 @@ railway unlink
 - Create a NEW project:
 
 ```bash
-railway init -n <new-project-name> -w "<workspace-name>"
+railway init -n <new-project-name> -w "Dhruv Gupta's Projects"
 ```
 
 ## 1) Link project and environment
 
 ```bash
-railway link --project <project-id> --environment production --workspace "<workspace-name>"
+railway link --project <project-id> --environment production --workspace "Dhruv Gupta's Projects"
 ```
 
 ## 2) Create services
