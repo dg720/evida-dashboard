@@ -15,6 +15,7 @@ Follow this guide unless `SPEC.md` (or explicit project instructions) override i
 - Make small, verifiable changes.
 - Prefer simple implementations over clever ones.
 - Keep progress visible (checklists in PR notes or `NOTES.md` if helpful).
+- Default backend runtime is **Python (FastAPI)** unless `SPEC.md` explicitly says otherwise.
 
 ## 3) Execution loop (build → test → deploy)
 

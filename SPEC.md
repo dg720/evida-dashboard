@@ -35,9 +35,9 @@ The system is divided into a **front‑end dashboard**, a **back‑end API** and
 - **State management**: Use Redux Toolkit or React Context to manage user selection (current persona vs uploaded data), theme settings, and loading state.
 - **Charts**: Use **Recharts** or **D3.js** for interactive charts.  Provide tooltips on hover and allow zooming/panning.
 
-### 2.2 Back‑end API
+### 2.2 Back-end API
 
-- **Language**: Node.js with **Express** for rapid development.  Alternatively, Python (FastAPI) can be used if more convenient for data processing.
+- **Language**: Python with **FastAPI** (required) for the API and LLM orchestration.
 - **Endpoints**:
   - `GET /personas` – returns list of available dummy personas.
   - `GET /persona/:id/data` – returns time‑series data for the selected persona.
