@@ -320,6 +320,58 @@ function Dashboard() {
     return `${month}/${day}`;
   };
 
+  const formatTooltipLabel = (value) => {
+    if (!value) {
+      return " ";
+    }
+    const formatted = formatMonthDay(value);
+    return formatted || String(value);
+  };
+
+  const formatMetricLabel = (value) => {
+    if (!value) {
+      return "";
+    }
+    return String(value)
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase());
+  };
+
+  const formatTooltipValue = (value) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return value ?? "--";
+    }
+    if (Math.abs(value) >= 1000) {
+      return Math.round(value).toLocaleString("en-US");
+    }
+    return Number.isInteger(value) ? value : value.toFixed(1);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) {
+      return null;
+    }
+    return (
+      <div className="rounded-xl border border-slate-200/70 bg-white/95 px-3 py-2 text-xs text-slate-600 shadow-lg">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          {formatTooltipLabel(label)}
+        </p>
+        <div className="mt-2 space-y-1">
+          {payload.map((entry) => (
+            <div key={entry.dataKey} className="flex items-center gap-2">
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ backgroundColor: entry.color }}
+              />
+              <span className="text-slate-500">{formatMetricLabel(entry.name || entry.dataKey)}</span>
+              <span className="font-semibold text-ink">{formatTooltipValue(entry.value)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const isActiveAlex = currentPersonaId === "active-alex";
   const stepsFill = isActiveAlex ? "rgba(34, 197, 94, 0.12)" : "rgba(249, 115, 22, 0.12)";
 
@@ -507,7 +559,7 @@ function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                       <Area
                         type="monotone"
                         dataKey="steps"
@@ -527,7 +579,7 @@ function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                       <Area
                         type="monotone"
                         dataKey="sleep_hours"
@@ -554,7 +606,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Area
                     type="monotone"
                     dataKey="steps"
@@ -574,7 +626,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Area
                     type="monotone"
                     dataKey="active_minutes"
@@ -594,7 +646,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="week" tick={{ fontSize: 10 }} />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Bar dataKey="steps" fill="var(--accent)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -613,7 +665,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Legend
                     content={({ payload }) => (
                     <div className="flex flex-wrap justify-center gap-4 text-xs text-slate-500">
@@ -671,7 +723,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis domain={[0, 100]} tickCount={6} />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Area
                     type="monotone"
                     dataKey="stress_index"
@@ -690,7 +742,7 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
-                  <Tooltip />
+                  <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                   <Area
                     type="monotone"
                     dataKey="hrv_rmssd"
@@ -753,7 +805,7 @@ function Dashboard() {
                       fill="var(--accent)"
                       fillOpacity={0.35}
                     />
-                    <Tooltip />
+                    <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "4 4" }} />
                     <defs>
                       <pattern id="baselineHatch" width="6" height="6" patternUnits="userSpaceOnUse">
                         <path d="M0 6L6 0" stroke="#94a3b8" strokeWidth="1" />

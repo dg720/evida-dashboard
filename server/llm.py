@@ -90,7 +90,7 @@ def call_llm(bundle, model: str) -> str:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     client = OpenAI(api_key=api_key)
-    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "1350"))
+    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "10000"))
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -104,14 +104,14 @@ def call_llm(bundle, model: str) -> str:
     return response.choices[0].message.content or ""
 
 
-def call_fixup_llm(bad_payload: dict[str, Any], schema: dict[str, Any], model: str) -> str:
+def call_fixup_llm(
+    bad_payload: dict[str, Any], schema: dict[str, Any], model: str
+) -> str:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     client = OpenAI(api_key=api_key)
-    fix_system = (
-        "You fix JSON to match a schema. Return ONLY valid JSON that matches the schema."
-    )
+    fix_system = "You fix JSON to match a schema. Return ONLY valid JSON that matches the schema."
     fix_user = "\n\n".join(
         [
             "SCHEMA:",
@@ -156,7 +156,9 @@ async def generate_coach_response(
         return payload
     except Exception:
         try:
-            raw_fix = call_fixup_llm(payload if "payload" in locals() else {}, response_schema, model)
+            raw_fix = call_fixup_llm(
+                payload if "payload" in locals() else {}, response_schema, model
+            )
             fixed = ensure_message_alias(parse_json_response(raw_fix))
             validate_against_schema(fixed, response_schema)
             return fixed

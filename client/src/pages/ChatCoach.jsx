@@ -21,6 +21,7 @@ function ChatCoach() {
   const [meetingError, setMeetingError] = useState("");
   const [activeContext, setActiveContext] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [contextVisibility, setContextVisibility] = useState({});
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -133,58 +134,102 @@ function ChatCoach() {
     });
   }
 
-  function formatCoachResponse(response) {
+  function buildCoachContent(response) {
     if (!response || typeof response !== "object") {
-      return "No response yet.";
+      return {
+        answer: "No response yet.",
+        context: { reasoning: [], recommendations: [], followUps: [] },
+      };
     }
-    const sections = [];
     const answer = response.answer || response.message || "";
-    if (String(answer).trim()) {
-      sections.push(String(answer).trim());
-    }
+    return {
+      answer: String(answer || "").trim() || "No response yet.",
+      context: {
+        reasoning: Array.isArray(response.reasoning_trace) ? response.reasoning_trace : [],
+        recommendations: Array.isArray(response.recommendations) ? response.recommendations : [],
+        followUps: Array.isArray(response.follow_ups) ? response.follow_ups : [],
+      },
+    };
+  }
 
-    if (Array.isArray(response.reasoning_trace) && response.reasoning_trace.length) {
-      const lines = response.reasoning_trace
-        .filter((line) => String(line).trim())
-        .map((line) => `- ${String(line).trim()}`);
-      if (lines.length) {
-        sections.push(["**What I'm seeing**", ...lines].join("\n"));
-      }
-    }
+  function renderContextSection({ reasoning, recommendations, followUps }) {
+    const hasReasoning = reasoning.some((line) => String(line).trim());
+    const hasRecommendations = recommendations.some((rec) => rec && typeof rec === "object");
+    const hasFollowUps = followUps.some((line) => String(line).trim());
 
-    if (Array.isArray(response.recommendations) && response.recommendations.length) {
-      const lines = response.recommendations
-        .filter((rec) => rec && typeof rec === "object")
-        .map((rec) => {
-          const action = String(rec.action || "").trim();
-          const why = String(rec.why || "").trim();
-          const timeframe = String(rec.timeframe || "").trim();
-          const success = String(rec.success_metric || "").trim();
-          const priority = String(rec.priority || "").trim();
-          const meta = [];
-          if (priority) meta.push(priority);
-          if (timeframe) meta.push(timeframe);
-          if (success) meta.push(`Success: ${success}`);
-          if (why) meta.push(why);
-          const suffix = meta.length ? ` — ${meta.join("; ")}` : "";
-          return action ? `- ${action}${suffix}` : "";
-        })
-        .filter(Boolean);
-      if (lines.length) {
-        sections.push(["**Next steps (SMART)**", ...lines].join("\n"));
-      }
-    }
+    return (
+      <div className="mt-3 space-y-4 border-t border-slate-200/70 pt-3 text-sm text-slate-600">
+        {hasReasoning ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              What I'm seeing
+            </p>
+            <ul className="space-y-1 pl-4 text-sm text-slate-600">
+              {reasoning
+                .filter((line) => String(line).trim())
+                .map((line, index) => (
+                  <li key={`reason-${index}`} className="list-disc">
+                    {String(line).trim()}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ) : null}
 
-    if (Array.isArray(response.follow_ups) && response.follow_ups.length) {
-      const lines = response.follow_ups
-        .filter((line) => String(line).trim())
-        .map((line) => `- ${String(line).trim()}`);
-      if (lines.length) {
-        sections.push(["**Follow-up questions**", ...lines].join("\n"));
-      }
-    }
+        {hasRecommendations ? (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Next steps (SMART)
+            </p>
+            <div className="space-y-3">
+              {recommendations
+                .filter((rec) => rec && typeof rec === "object")
+                .map((rec, index) => {
+                  const action = String(rec.action || "").trim();
+                  const why = String(rec.why || "").trim();
+                  const timeframe = String(rec.timeframe || "").trim();
+                  const success = String(rec.success_metric || "").trim();
+                  const priority = String(rec.priority || "").trim();
+                  return (
+                    <div key={`rec-${index}`} className="space-y-1">
+                      {action ? (
+                        <p className="text-sm font-semibold text-ink">{action}</p>
+                      ) : null}
+                      {why ? <p className="text-xs text-slate-500">Why: {why}</p> : null}
+                      {timeframe ? (
+                        <p className="text-xs text-slate-500">Timeframe: {timeframe}</p>
+                      ) : null}
+                      {success ? (
+                        <p className="text-xs text-slate-500">Success metric: {success}</p>
+                      ) : null}
+                      {priority ? (
+                        <p className="text-xs text-slate-500">Priority: {priority}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        ) : null}
 
-    return sections.length ? sections.join("\n\n") : "No response yet.";
+        {hasFollowUps ? (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Follow-up questions
+            </p>
+            <ul className="space-y-1 pl-4 text-sm text-slate-600">
+              {followUps
+                .filter((line) => String(line).trim())
+                .map((line, index) => (
+                  <li key={`follow-${index}`} className="list-disc">
+                    {String(line).trim()}
+                  </li>
+                ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   async function handleSend() {
@@ -218,10 +263,10 @@ function ChatCoach() {
           meeting_context: meetingPayload,
         }),
       });
-      const formattedResponse = formatCoachResponse(response);
+      const coachContent = buildCoachContent(response);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: formattedResponse },
+        { role: "assistant", content: coachContent.answer, context: coachContent.context },
       ]);
     } catch {
       setMessages((prev) => [
@@ -368,9 +413,35 @@ function ChatCoach() {
                     : "bg-accent text-white",
                 ].join(" ")}
               >
-                {message.role === "assistant"
-                  ? renderAssistantMessage(message.content)
-                  : message.content}
+                {message.role === "assistant" ? (
+                  <>
+                    {renderAssistantMessage(message.content)}
+                    {message.context &&
+                    (message.context.reasoning?.length ||
+                      message.context.recommendations?.length ||
+                      message.context.followUps?.length) ? (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500"
+                          onClick={() =>
+                            setContextVisibility((prev) => ({
+                              ...prev,
+                              [index]: !prev[index],
+                            }))
+                          }
+                        >
+                          {contextVisibility[index] ? "Hide context" : "Context"}
+                        </button>
+                        {contextVisibility[index]
+                          ? renderContextSection(message.context)
+                          : null}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  message.content
+                )}
               </div>
             </div>
           ))}
