@@ -45,3 +45,14 @@ export function computeReadiness(summary) {
   const hrScore = restingHr ? Math.max(0, 100 - (restingHr - 50) * 1.5) : 50;
   return Math.round((sleepScore * 0.4 + stressScore * 0.35 + hrScore * 0.25) * 10) / 10;
 }
+
+export function computeSleepScore(summary) {
+  if (!summary) {
+    return null;
+  }
+  const sleep = summary.average_sleep_hours || 0;
+  const efficiency = summary.sleep_efficiency || 0;
+  const durationScore = Math.min((sleep / 8) * 100, 100);
+  const efficiencyScore = Math.min(efficiency * 100, 100);
+  return Math.round((durationScore * 0.6 + efficiencyScore * 0.4) * 10) / 10;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -9,8 +9,11 @@ import {
   Legend,
   Line,
   LineChart,
-  RadialBar,
-  RadialBarChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -21,36 +24,19 @@ import SectionHeader from "../components/SectionHeader.jsx";
 import PersonaSelector from "../components/PersonaSelector.jsx";
 import StatCard from "../components/StatCard.jsx";
 import TabButton from "../components/TabButton.jsx";
-import { apiFetch } from "../lib/api.js";
-import { computeReadiness, formatNumber, getLatestDays, groupByWeek } from "../lib/metrics.js";
+import RangeMetricCard from "../components/RangeMetricCard.jsx";
+import { computeReadiness, computeSleepScore, formatNumber, getLatestDays, groupByWeek } from "../lib/metrics.js";
 
 const tabs = ["Overview", "Activity", "Sleep", "Stress & Recovery", "Comparison"];
 
 function Dashboard() {
-  const { personas, currentPersonaId, series, summary } = useAppContext();
+  const { series, summary } = useAppContext();
   const [activeTab, setActiveTab] = useState(tabs[0]);
-  const [comparisonId, setComparisonId] = useState("");
-  const [comparisonSummary, setComparisonSummary] = useState(null);
 
   const latestSeries = useMemo(() => getLatestDays(series, 14), [series]);
   const weeklySteps = useMemo(() => groupByWeek(series), [series]);
   const readiness = useMemo(() => computeReadiness(summary), [summary]);
-  const fallbackComparisonId = useMemo(() => {
-    const fallback = personas.find((persona) => persona.id !== currentPersonaId);
-    return fallback ? fallback.id : "";
-  }, [personas, currentPersonaId]);
-  const effectiveComparisonId = comparisonId || fallbackComparisonId;
-
-  useEffect(() => {
-    async function loadComparison() {
-      if (!effectiveComparisonId) {
-        return;
-      }
-      const data = await apiFetch(`/persona/${effectiveComparisonId}/data`);
-      setComparisonSummary(data.summary);
-    }
-    loadComparison();
-  }, [effectiveComparisonId]);
+  const sleepScore = useMemo(() => computeSleepScore(summary), [summary]);
 
   if (!series.length) {
     return (
@@ -63,9 +49,187 @@ function Dashboard() {
     );
   }
 
-  const readinessChart = [
-    { name: "Readiness", value: readiness || 0, fill: "var(--accent)" },
-  ];
+  const trendLabel = series.length >= 90 ? "3 mo trend" : "30-day trend";
+  const trends = useMemo(() => {
+    const windowSize = Math.min(series.length, 60);
+    const half = Math.floor(windowSize / 2);
+    if (!half) {
+      return {};
+    }
+
+    const recent = series.slice(-half);
+    const prior = series.slice(-(half * 2), -half);
+    const average = (entries, key) => {
+      if (!entries.length) {
+        return 0;
+      }
+      return entries.reduce((sum, entry) => sum + (entry[key] || 0), 0) / entries.length;
+    };
+    const buildTrend = (key) => {
+      const recentAvg = average(recent, key);
+      const priorAvg = average(prior, key);
+      if (!priorAvg) {
+        return { direction: "flat", changePct: 0 };
+      }
+      const changePct = ((recentAvg - priorAvg) / priorAvg) * 100;
+      const direction = Math.abs(changePct) < 3 ? "flat" : changePct > 0 ? "up" : "down";
+      return { direction, changePct };
+    };
+
+    return {
+      steps: buildTrend("steps"),
+      sleep_hours: buildTrend("sleep_hours"),
+      resting_hr: buildTrend("resting_hr"),
+      hrv_rmssd: buildTrend("hrv_rmssd"),
+      stress_index: buildTrend("stress_index"),
+    };
+  }, [series]);
+
+  const formatTrend = (trend) => {
+    if (!trend) {
+      return "No change";
+    }
+    const magnitude = Math.abs(trend.changePct);
+    if (!Number.isFinite(magnitude) || magnitude < 0.1) {
+      return "Flat";
+    }
+    if (trend.direction === "up") {
+      return `Up ${magnitude.toFixed(1)}%`;
+    }
+    if (trend.direction === "down") {
+      return `Down ${magnitude.toFixed(1)}%`;
+    }
+    return "Flat";
+  };
+
+  const radarData = useMemo(() => {
+    const metrics = [
+      {
+        key: "average_steps",
+        label: "Steps",
+        baseline: 8000,
+        higherBetter: true,
+      },
+      {
+        key: "average_sleep_hours",
+        label: "Sleep",
+        baseline: 7.5,
+        higherBetter: true,
+      },
+      {
+        key: "stress_index",
+        label: "Stress",
+        baseline: 40,
+        higherBetter: false,
+      },
+      {
+        key: "average_resting_hr",
+        label: "Resting HR",
+        baseline: 65,
+        higherBetter: false,
+      },
+      {
+        key: "hrv_rmssd",
+        label: "HRV",
+        baseline: 50,
+        higherBetter: true,
+      },
+    ];
+
+    return metrics.map((metric) => {
+      const rawValue = summary ? summary[metric.key] : 0;
+      const ratio = metric.higherBetter
+        ? rawValue / metric.baseline
+        : metric.baseline / (rawValue || metric.baseline);
+      const score = Math.max(0, Math.min(ratio * 100, 150));
+      return {
+        metric: metric.label,
+        baseline: 100,
+        current: score,
+      };
+    });
+  }, [summary]);
+
+  const rangeCards = useMemo(() => {
+    const toPercentile = (value, min, max) => {
+      if (value === null || value === undefined) {
+        return 0;
+      }
+      if (max === min) {
+        return 0;
+      }
+      const raw = ((value - min) / (max - min)) * 100;
+      return Math.max(0, Math.min(raw, 100));
+    };
+    const getStatus = (value, minTarget, maxTarget) => {
+      if (value === null || value === undefined) {
+        return "neutral";
+      }
+      if (value < minTarget) {
+        return "low";
+      }
+      if (value > maxTarget) {
+        return "high";
+      }
+      return "target";
+    };
+
+    const configs = [
+      {
+        key: "average_resting_hr",
+        seriesKey: "resting_hr",
+        label: "Resting HR",
+        unit: "bpm",
+        min: 45,
+        max: 85,
+        target: [55, 70],
+        detail: "Lower is generally better for recovery.",
+      },
+      {
+        key: "stress_index",
+        seriesKey: "stress_index",
+        label: "Stress index",
+        unit: "/100",
+        min: 15,
+        max: 85,
+        target: [20, 45],
+        detail: "Lower values suggest calmer days.",
+      },
+      {
+        key: "average_sleep_hours",
+        seriesKey: "sleep_hours",
+        label: "Sleep duration",
+        unit: "h",
+        min: 5,
+        max: 9,
+        target: [7, 8.5],
+        detail: "Target range for adults: 7-9 hours.",
+      },
+      {
+        key: "hrv_rmssd",
+        seriesKey: "hrv_rmssd",
+        label: "HRV (RMSSD)",
+        unit: "ms",
+        min: 20,
+        max: 90,
+        target: [40, 70],
+        detail: "Higher values indicate better recovery.",
+      },
+    ];
+
+    return configs.map((config) => {
+      const value = summary ? summary[config.key] : null;
+      return {
+        label: config.label,
+        value: formatNumber(value, ""),
+        unit: config.unit,
+        status: getStatus(value, config.target[0], config.target[1]),
+        percentile: toPercentile(value, config.min, config.max),
+        trendText: formatTrend(trends[config.seriesKey]),
+        detail: config.detail,
+      };
+    });
+  }, [summary, trends]);
 
   return (
     <div className="space-y-8">
@@ -82,80 +246,120 @@ function Dashboard() {
       </div>
 
       {activeTab === "Overview" && (
-        <div className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <StatCard
-              label="Daily steps"
-              value={formatNumber(summary?.average_steps, "")}
-              detail="Target: 8-10k steps/day"
-              accent
-            />
-            <StatCard
-              label="Sleep duration"
-              value={formatNumber(summary?.average_sleep_hours, " h")}
-              detail="Recommended: 7-9 hours"
-            />
-            <StatCard
-              label="Stress index"
-              value={formatNumber(summary?.stress_index, "/100")}
-              detail="Lower is calmer"
-              accent
-            />
-            <StatCard
-              label="Calories burned"
-              value={formatNumber(summary?.calories_burned, " kcal")}
-              detail="Daily energy output"
-            />
-            <StatCard
-              label="Resting HR"
-              value={formatNumber(summary?.average_resting_hr, " bpm")}
-              detail="Lower is typically better"
-            />
-            <StatCard
-              label="HRV (RMSSD)"
-              value={formatNumber(summary?.hrv_rmssd, " ms")}
-              detail="Higher is typically better"
-            />
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="glass-card rounded-2xl p-6">
-              <p className="text-sm font-semibold uppercase text-slate-500">Steps trend</p>
-              <div className="mt-4 h-64">
-                <ResponsiveContainer>
-                  <LineChart data={latestSeries}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="steps" stroke="var(--accent)" strokeWidth={2} />
-                    <Brush dataKey="date" height={20} stroke="var(--accent)" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+        <div className="space-y-8">
+          <section>
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase text-slate-500">In Focus</p>
+              <p className="font-display text-xl font-semibold text-ink">
+                High-level health signals for today
+              </p>
             </div>
-            <div className="glass-card rounded-2xl p-6">
-              <p className="text-sm font-semibold uppercase text-slate-500">Readiness score</p>
-              <div className="relative mt-4 flex h-64 items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart
-                    innerRadius="70%"
-                    outerRadius="100%"
-                    data={readinessChart}
-                    startAngle={180}
-                    endAngle={0}
-                  >
-                    <RadialBar dataKey="value" background cornerRadius={12} />
-                    <Tooltip />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-                <div className="absolute text-center">
-                  <p className="text-3xl font-display font-semibold text-ink">{readiness || "--"}</p>
-                  <p className="text-sm text-slate-500">Recovery readiness</p>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <StatCard
+                label="Sleep score"
+                value={formatNumber(sleepScore, "/100")}
+                detail="Based on sleep duration + efficiency"
+                accent
+              />
+              <StatCard
+                label="Resting HR"
+                value={formatNumber(summary?.average_resting_hr, " bpm")}
+                detail="Lower is typically better"
+                accent
+              />
+              <StatCard
+                label="Stress index"
+                value={formatNumber(summary?.stress_index, "/100")}
+                detail="Lower is calmer"
+                accent
+              />
+              <StatCard
+                label="Recovery readiness"
+                value={formatNumber(readiness, "")}
+                detail="Composite recovery score"
+                accent
+              />
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase text-slate-500">At a glance</p>
+              <p className="font-display text-xl font-semibold text-ink">
+                Key daily metrics that shape your week
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+              <StatCard
+                label="Daily steps"
+                value={formatNumber(summary?.average_steps, "")}
+                detail="Target: 8-10k steps/day"
+              />
+              <StatCard
+                label="Sleep duration"
+                value={formatNumber(summary?.average_sleep_hours, " h")}
+                detail="Recommended: 7-9 hours"
+              />
+              <StatCard
+                label="Calories burned"
+                value={formatNumber(summary?.calories_burned, " kcal")}
+                detail="Daily energy output"
+              />
+              <StatCard
+                label="Active minutes"
+                value={formatNumber(summary?.active_minutes, " min")}
+                detail="Movement across the day"
+              />
+              <StatCard
+                label="HRV (RMSSD)"
+                value={formatNumber(summary?.hrv_rmssd, " ms")}
+                detail="Higher is typically better"
+              />
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase text-slate-500">Trends</p>
+              <p className="font-display text-xl font-semibold text-ink">
+                Time-series signals from the last two weeks
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="glass-card rounded-2xl p-6">
+                <p className="text-sm font-semibold uppercase text-slate-500">Steps trend</p>
+                <div className="mt-4 h-64">
+                  <ResponsiveContainer>
+                    <LineChart data={latestSeries}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="steps" stroke="var(--accent)" strokeWidth={2} />
+                      <Brush dataKey="date" height={20} stroke="var(--accent)" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              <div className="glass-card rounded-2xl p-6">
+                <p className="text-sm font-semibold uppercase text-slate-500">Sleep trend</p>
+                <div className="mt-4 h-64">
+                  <ResponsiveContainer>
+                    <LineChart data={latestSeries}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="sleep_hours" stroke="#0f766e" strokeWidth={2} />
+                      <Line type="monotone" dataKey="sleep_efficiency" stroke="#f97316" strokeWidth={2} />
+                      <Brush dataKey="date" height={20} stroke="var(--accent)" />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
       )}
 
@@ -274,65 +478,58 @@ function Dashboard() {
       )}
 
       {activeTab === "Comparison" && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="glass-card rounded-2xl p-6">
-            <p className="text-sm font-semibold uppercase text-slate-500">Compare personas</p>
-            <div className="mt-4 flex flex-wrap items-center gap-4">
-              <select
-                value={effectiveComparisonId}
-                onChange={(event) => setComparisonId(event.target.value)}
-                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm"
-              >
-                {personas
-                  .filter((persona) => persona.id !== currentPersonaId)
-                  .map((persona) => (
-                    <option key={persona.id} value={persona.id}>
-                      {persona.name}
-                    </option>
-                  ))}
-              </select>
-              <p className="text-sm text-slate-500">
-                Norms: 7-9 hours sleep, stress index below 40, resting HR under 70 bpm.
-              </p>
+            <p className="text-sm font-semibold uppercase text-slate-500">Baseline comparison</p>
+            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <span>Population baselines: steps 8k, sleep 7.5h, stress 40, resting HR 65 bpm, HRV 50 ms.</span>
+              <span>{trendLabel} changes shown on benchmark cards.</span>
             </div>
           </div>
 
-          <div className="glass-card rounded-2xl p-6">
-            <div className="h-72">
-              <ResponsiveContainer>
-                <BarChart
-                  data={[
-                    {
-                      metric: "Steps",
-                      current: summary?.average_steps || 0,
-                      compare: comparisonSummary?.average_steps || 0,
-                    },
-                    {
-                      metric: "Sleep",
-                      current: summary?.average_sleep_hours || 0,
-                      compare: comparisonSummary?.average_sleep_hours || 0,
-                    },
-                    {
-                      metric: "Stress",
-                      current: summary?.stress_index || 0,
-                      compare: comparisonSummary?.stress_index || 0,
-                    },
-                    {
-                      metric: "Resting HR",
-                      current: summary?.average_resting_hr || 0,
-                      compare: comparisonSummary?.average_resting_hr || 0,
-                    },
-                  ]}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="metric" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="current" name="Current persona" fill="var(--accent)" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="compare" name="Comparison persona" fill="#94a3b8" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="glass-card rounded-2xl p-6">
+              <p className="text-sm font-semibold uppercase text-slate-500">Performance radar</p>
+              <div className="mt-4 h-80">
+                <ResponsiveContainer>
+                  <RadarChart data={radarData}>
+                    <PolarGrid />
+                    <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 150]} tick={{ fontSize: 10 }} />
+                    <Radar
+                      name="Baseline"
+                      dataKey="baseline"
+                      stroke="#94a3b8"
+                      fill="#cbd5f5"
+                      fillOpacity={0.2}
+                    />
+                    <Radar
+                      name="Current"
+                      dataKey="current"
+                      stroke="var(--accent)"
+                      fill="var(--accent)"
+                      fillOpacity={0.35}
+                    />
+                    <Legend />
+                    <Tooltip />
+                  </RadarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="grid gap-4">
+              {rangeCards.map((card) => (
+                <RangeMetricCard
+                  key={card.label}
+                  label={card.label}
+                  value={card.value}
+                  unit={card.unit}
+                  status={card.status}
+                  percentile={card.percentile}
+                  trendLabel={trendLabel}
+                  trendText={card.trendText}
+                  detail={card.detail}
+                />
+              ))}
             </div>
           </div>
         </div>
