@@ -152,6 +152,21 @@ def call_fixup_llm(
     return response.choices[0].message.content or ""
 
 
+def call_llm_messages(messages: list[dict[str, str]], model: str, temperature: float = 0.4) -> str:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set.")
+    client = OpenAI(api_key=api_key)
+    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "10000"))
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return response.choices[0].message.content or ""
+
+
 async def generate_coach_response(
     *,
     wearables_summary: dict[str, Any],
@@ -160,26 +175,70 @@ async def generate_coach_response(
 ) -> dict[str, Any]:
     prompt_module = load_prompt_module()
     response_schema = prompt_module.RESPONSE_SCHEMA
+    analysis_schema = getattr(prompt_module, "ANALYSIS_SCHEMA", response_schema)
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-    bundle = build_prompt_bundle(
+    analysis_bundle = build_prompt_bundle(
         wearables_summary=wearables_summary,
         coaching_context=coaching_context,
         user_query=user_query,
-        response_schema=response_schema,
+        response_schema=analysis_schema,
     )
 
     try:
-        raw = call_llm(bundle, model)
-        payload = ensure_message_alias(parse_json_response(raw))
-        payload = coalesce_blank_answer(payload)
-        validate_against_schema(payload, response_schema)
-        return payload
+        raw_analysis = call_llm(analysis_bundle, model)
+        analysis_payload = parse_json_response(raw_analysis)
+        validate_against_schema(analysis_payload, analysis_schema)
     except Exception:
         try:
             raw_fix = call_fixup_llm(
-                payload if "payload" in locals() else {}, response_schema, model
+                analysis_payload if "analysis_payload" in locals() else {},
+                analysis_schema,
+                model,
             )
+            analysis_payload = parse_json_response(raw_fix)
+            validate_against_schema(analysis_payload, analysis_schema)
+        except Exception:
+            return safe_fallback_response()
+
+    coach_system = (
+        "You are a human health coach. Use the analysis JSON and the user query to write a clear, "
+        "user-friendly response with appropriate detail. Do not include the analysis fields. "
+        "Return ONLY valid JSON with the shape: {\"answer\": \"...\"}."
+    )
+    coach_user = "\n\n".join(
+        [
+            "USER_QUERY:",
+            user_query.strip(),
+            "ANALYSIS_JSON:",
+            json.dumps(analysis_payload, indent=2),
+        ]
+    )
+    try:
+        raw_answer = call_llm_messages(
+            [
+                {"role": "system", "content": coach_system},
+                {"role": "user", "content": coach_user},
+            ],
+            model,
+            temperature=0.5,
+        )
+        answer_payload = parse_json_response(raw_answer)
+    except Exception:
+        answer_payload = {}
+
+    answer_text = str(answer_payload.get("answer") or "").strip()
+    merged = dict(analysis_payload)
+    merged["answer"] = answer_text
+    merged = ensure_message_alias(merged)
+    merged = coalesce_blank_answer(merged)
+    try:
+        validate_against_schema(merged, response_schema)
+        return merged
+    except Exception:
+        try:
+            raw_fix = call_fixup_llm(merged, response_schema, model)
             fixed = ensure_message_alias(parse_json_response(raw_fix))
+            fixed = coalesce_blank_answer(fixed)
             validate_against_schema(fixed, response_schema)
             return fixed
         except Exception:

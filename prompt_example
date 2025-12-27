@@ -146,6 +146,64 @@ USER_QUERY: str = "Why am I waking up at night, and what should I do this week?"
 # 2) Response schema (structured, robust)
 # -----------------------------------------
 
+ANALYSIS_SCHEMA: Dict[str, Any] = {
+    "type": "object",
+    "required": ["reasoning_trace", "data_references", "recommendations", "follow_ups", "safety"],
+    "properties": {
+        "reasoning_trace": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Short bullet chain of evidence. MUST reference provided metrics only (no inventions).",
+        },
+        "data_references": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["metric_path", "value", "window_days", "comparison"],
+                "properties": {
+                    "metric_path": {"type": "string", "description": "JSON pointer-like path, e.g., aggregates.sleep.duration_mean_h"},
+                    "value": {"type": ["number", "string", "null"]},
+                    "window_days": {"type": "number"},
+                    "comparison": {"type": "string", "description": "e.g. 'vs baseline', 'trend', 'no baseline available'"},
+                },
+            },
+        },
+        "recommendations": {
+            "type": "array",
+            "description": "Actionable suggestions tied to goals/constraints. SMART where possible.",
+            "items": {
+                "type": "object",
+                "required": ["category", "action", "why", "priority", "timeframe", "success_metric"],
+                "properties": {
+                    "category": {"type": "string", "enum": ["sleep", "recovery", "activity", "stress", "nutrition", "habits", "other"]},
+                    "action": {"type": "string"},
+                    "why": {"type": "string"},
+                    "priority": {"type": "string", "enum": ["high", "medium", "low"]},
+                    "timeframe": {"type": "string", "description": "e.g. 'tonight', 'next 7 days'"},
+                    "success_metric": {"type": "string", "description": "e.g. 'sleep_duration_mean_h +30min' or 'bedtime_std_min -15'"},
+                },
+            },
+        },
+        "follow_ups": {
+            "type": "array",
+            "description": "At most 3 clarifying questions ONLY if necessary due to missing data or ambiguity.",
+            "items": {"type": "string"},
+        },
+        "safety": {
+            "type": "object",
+            "required": ["disclaimer", "red_flags"],
+            "properties": {
+                "disclaimer": {"type": "string", "description": "Non-medical advice disclaimer."},
+                "red_flags": {
+                    "type": "array",
+                    "description": "If user mentions concerning symptoms, advise seeking professional help. Keep generic.",
+                    "items": {"type": "string"},
+                },
+            },
+        },
+    },
+}
+
 RESPONSE_SCHEMA: Dict[str, Any] = {
     "type": "object",
     "required": ["answer", "reasoning_trace", "data_references", "recommendations", "follow_ups", "safety"],
