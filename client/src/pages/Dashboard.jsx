@@ -408,11 +408,6 @@ function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <SectionHeader
-        title="Dashboard"
-        subtitle="Daily trends, recovery signals, and persona comparisons."
-      />
-
       <div className="flex flex-wrap gap-3">
         {tabs.map((tab) => (
           <TabButton key={tab} label={tab} active={activeTab === tab} onClick={() => setActiveTab(tab)} />

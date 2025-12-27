@@ -111,17 +111,25 @@ function ChatCoach() {
   }
 
   function formatNumberedLists(text) {
-    const withBreaks = text.replace(/(^|\s)\s*(\d+)[\.\)]\s+/g, "\n\n$2. ");
+    const withBreaks = text.replace(/(^|[\s:;])\s*(\d+)[\.\)]\s+/g, "$1\n\n$2. ");
     return withBreaks.replace(/\n{3,}/g, "\n\n").trim();
   }
 
   function collapseNumberedParagraphs(text) {
-    return text.replace(/\n\n(\d+\.\s+)/g, "\n$1");
+    return text.replace(/(\d+\.[^\n]*)\n\n(\d+\.\s+)/g, "$1\n$2");
+  }
+
+  function formatActionBlocks(text) {
+    const skipLabels = /(Why:|Success Metric:|Timeframe:|Action Plan:|Next steps|Follow-up questions)/i;
+    return text.replace(/\s+([A-Z][^:\n]{3,}:\s)/g, (match, label) =>
+      skipLabels.test(label) ? match : `\n\n${label}`
+    );
   }
 
   function normalizeAssistantText(text) {
     const withRounded = formatRoundedNumbers(text);
-    return collapseNumberedParagraphs(formatNumberedLists(withRounded));
+    const withLists = formatNumberedLists(withRounded);
+    return collapseNumberedParagraphs(formatActionBlocks(withLists));
   }
 
   function renderAssistantMessage(content) {
@@ -355,7 +363,7 @@ function ChatCoach() {
         <div>
           <p className="font-display text-2xl font-semibold text-ink">Health Coach</p>
           <p className="text-sm text-slate-500">
-            Uses your wearable data and uploaded coaching sessions for context.
+            Uses your wearable data and linked coaching sessions for context.
           </p>
         </div>
         <div className="flex w-full flex-wrap items-center gap-3">
