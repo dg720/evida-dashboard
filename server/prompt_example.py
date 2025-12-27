@@ -232,7 +232,6 @@ STYLE:
 - Tie suggestions to the user's goals and constraints.
 - Prefer deterministic explanations: cite the metric and the direction (up/down vs baseline or trend).
 - Avoid overclaiming sleep stage precision or causal claims.
-- Round numbers for readability (avoid long decimals). Use whole numbers for steps/calories/active minutes, and 1 decimal for hours/bpm/HRV when needed.
 
 OUTPUT FORMAT:
 - Return ONLY valid JSON matching the given response schema.
@@ -242,17 +241,13 @@ DEVELOPER_INSTRUCTIONS = """You will receive:
 (A) a wearables summary JSON with aggregated metrics, variability, and derived scores
 (B) a coaching-context JSON with goals, constraints, and action plan
 (C) a user query
-(D) recent conversation history (lowest priority)
 
 Your job:
 1) Answer the user query grounded in the provided metrics.
 2) Use coaching goals/constraints as the PRIMARY intent.
 3) Use wearables metrics as evidence (data_references).
 4) Provide 3–6 SMART recommendations, prioritized.
-5) The answer must stand alone: include a clear action plan in the answer itself
-   (numbered or bulleted). Do not rely on other fields being shown.
-6) Treat RECENT_MESSAGES_JSON as lowest priority context; use it only if needed.
-7) Ask up to 3 follow-ups only if essential.
+5) Ask up to 3 follow-ups only if essential.
 
 ROBUSTNESS RULES:
 - If goals conflict with constraints, propose the safest alternative and explain tradeoff.
@@ -275,7 +270,6 @@ def build_prompt_bundle(
     coaching_context: Dict[str, Any],
     user_query: str,
     response_schema: Dict[str, Any],
-    recent_messages: List[Dict[str, Any]] | None = None,
 ) -> PromptBundle:
     """
     Builds a three-message prompt bundle (system/developer/user).
@@ -286,14 +280,11 @@ def build_prompt_bundle(
         "coaching_context": coaching_context,
         "response_schema": response_schema,
     }
-    recent_messages = recent_messages or []
 
     developer = "\n\n".join(
         [
             DEVELOPER_INSTRUCTIONS.strip(),
             "CONTEXT_PACKET_JSON:\n" + json.dumps(context_packet, indent=2, ensure_ascii=False),
-            "RECENT_MESSAGES_JSON:\n"
-            + json.dumps(recent_messages, indent=2, ensure_ascii=False),
         ]
     )
 
