@@ -4,7 +4,8 @@ import { useAppContext } from "../context/AppContext.jsx";
 import { apiFetch, SCRIBE_API_BASE_URL } from "../lib/api.js";
 
 function ChatCoach() {
-  const { summary, series, userContext } = useAppContext();
+  const { summary, series, userContext, personas, currentPersonaId, setCurrentPersonaId } =
+    useAppContext();
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -20,6 +21,7 @@ function ChatCoach() {
   const [meetingError, setMeetingError] = useState("");
   const [activeContext, setActiveContext] = useState(null);
   const [showImporter, setShowImporter] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -137,6 +139,17 @@ function ChatCoach() {
     setLoading(true);
 
     try {
+      const meetingPayload = activeContext
+        ? {
+            id: activeContext.id,
+            patientDisplayName: activeContext.patientDisplayName,
+            createdAt: activeContext.createdAt,
+            transcript: activeContext.transcript
+              ? String(activeContext.transcript).slice(0, 2000)
+              : null,
+            plan: activeContext.plan ? JSON.parse(JSON.stringify(activeContext.plan)) : null,
+          }
+        : null;
       const response = await apiFetch("/chat", {
         method: "POST",
         body: JSON.stringify({
@@ -144,17 +157,7 @@ function ChatCoach() {
           user_context: userContext,
           query: userMessage.content,
           series,
-          meeting_context: activeContext
-            ? {
-                id: activeContext.id,
-                patientDisplayName: activeContext.patientDisplayName,
-                createdAt: activeContext.createdAt,
-                transcript: activeContext.transcript
-                  ? String(activeContext.transcript).slice(0, 2000)
-                  : null,
-                plan: activeContext.plan ? JSON.parse(JSON.stringify(activeContext.plan)) : null,
-              }
-            : null,
+          meeting_context: meetingPayload,
         }),
       });
       setMessages((prev) => [
@@ -182,6 +185,20 @@ function ChatCoach() {
         subtitle="Ask about your sleep, training, stress, or recovery."
         action={
           <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 md:flex">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">Persona</span>
+              <select
+                value={currentPersonaId || ""}
+                onChange={(event) => setCurrentPersonaId(event.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+              >
+                {personas.map((persona) => (
+                  <option key={persona.id} value={persona.id}>
+                    {persona.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             {activeContext ? (
               <button
                 type="button"
@@ -241,11 +258,45 @@ function ChatCoach() {
 
       {activeContext ? (
         <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/70 px-4 py-3 text-xs text-emerald-700">
-          Active context: {activeContext.patientDisplayName || "Imported meeting"} on{" "}
-          {activeContext.createdAt
-            ? new Date(activeContext.createdAt).toLocaleDateString()
-            : "unknown date"}
-          .
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>
+              Active context: {activeContext.patientDisplayName || "Imported meeting"} on{" "}
+              {activeContext.createdAt
+                ? new Date(activeContext.createdAt).toLocaleDateString()
+                : "unknown date"}
+              .
+            </span>
+            <button
+              type="button"
+              className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-semibold text-emerald-700"
+              onClick={() => setShowPreview((prev) => !prev)}
+            >
+              {showPreview ? "Hide preview" : "Preview payload"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {activeContext && showPreview ? (
+        <div className="glass-card rounded-2xl p-4 text-xs text-slate-600">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            Meeting context payload
+          </p>
+          <pre className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-white/90 p-3 text-[11px] text-slate-600">
+            {JSON.stringify(
+              {
+                id: activeContext.id,
+                patientDisplayName: activeContext.patientDisplayName,
+                createdAt: activeContext.createdAt,
+                transcript: activeContext.transcript
+                  ? String(activeContext.transcript).slice(0, 2000)
+                  : null,
+                plan: activeContext.plan ? JSON.parse(JSON.stringify(activeContext.plan)) : null,
+              },
+              null,
+              2
+            )}
+          </pre>
         </div>
       ) : null}
 
