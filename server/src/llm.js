@@ -134,8 +134,10 @@ function buildPrompt({ metrics, userContext, query, stats, meetingContext }) {
     "Base your response only on the provided metrics and context. If data is missing, say so.",
     "Format the message with short Markdown section headings in bold.",
     "Use sections: **Summary**, **What stands out**, **Next steps (SMART)**.",
-    "Use bullet points under Next steps (2-4 items). Each bullet must be SMART and include a why/how clause.",
-    "Tie each recommendation to a metric or goal in the data summary.",
+    "Only include **Next steps (SMART)** when the user explicitly asks for advice, recommendations, or a plan.",
+    "When you include SMART steps, use 2-4 bullets and include a brief why/how clause.",
+    "Tie each recommendation to a metric, goal, or meeting plan detail relevant to the user's question.",
+    "If the user asks about imported meeting plans, reference them directly instead of generic guidance.",
     "Keep sentences concise, specific, and actionable.",
     "Do not include a disclaimer in the message; the UI displays it separately.",
     "Return a JSON object with a `message` string and optional `recommendations` array.",
@@ -243,7 +245,7 @@ function stripDisclaimer(message) {
     .trim();
 }
 
-function fallbackResponse({ metrics, userContext }) {
+function fallbackResponse({ metrics, userContext, query }) {
   const steps = metrics.average_steps
     ? `${metrics.average_steps} steps/day`
     : "step data not available";
@@ -263,35 +265,43 @@ function fallbackResponse({ metrics, userContext }) {
     goals.push(userContext.sleep_goal);
   }
 
-  const message = [
+  const wantsAdvice = /plan|recommend|advice|suggest|improve|help|should i|next steps/i.test(query || "");
+  const messageParts = [
     "**Summary**",
     `Based on your recent metrics, your activity is ${steps}, sleep is ${sleep}, and ${stress}.`,
     "",
     "**What stands out**",
     goals.length
-      ? `Your goals include ${goals.join(", ")}, so small changes linked to sleep and activity will have the biggest impact.`
-      : "Small changes linked to sleep and activity will have the biggest impact.",
-    "",
-    "**Next steps (SMART)**",
-    "- Set a consistent bedtime for 3 nights this week.",
-    "- Add a 10-minute walk after lunch on 3 days.",
-    "- Track energy and stress after each change to see what helps most.",
-  ].join("\n");
+      ? `Your goals include ${goals.join(", ")}, so changes tied to those goals will matter most.`
+      : "Let me know which area you want to focus on next.",
+  ];
+  if (wantsAdvice) {
+    messageParts.push(
+      "",
+      "**Next steps (SMART)**",
+      "- Set a consistent bedtime for 3 nights this week.",
+      "- Add a 10-minute walk after lunch on 3 days.",
+      "- Track energy and stress after each change to see what helps most."
+    );
+  }
+  const message = messageParts.join("\n");
 
   return {
     message,
-    recommendations: [
-      {
-        category: "Sleep",
-        action: "Set a consistent bedtime for 3 nights this week",
-        priority: "medium",
-      },
-      {
-        category: "Activity",
-        action: "Add a 10-minute walk after lunch on 3 days",
-        priority: "low",
-      },
-    ],
+    recommendations: wantsAdvice
+      ? [
+          {
+            category: "Sleep",
+            action: "Set a consistent bedtime for 3 nights this week",
+            priority: "medium",
+          },
+          {
+            category: "Activity",
+            action: "Add a 10-minute walk after lunch on 3 days",
+            priority: "low",
+          },
+        ]
+      : [],
   };
 }
 
@@ -307,9 +317,9 @@ async function generateCoachResponse({ metrics, userContext, query, stats, meeti
   try {
     const content = await callOpenAI({ systemMessage, userMessage });
     const parsed = parseModelResponse(content);
-    return enrichResponse(parsed, { metrics, userContext });
+    return enrichResponse(parsed, { metrics, userContext, query });
   } catch {
-    return enrichResponse(fallbackResponse({ metrics, userContext }), { metrics, userContext });
+    return enrichResponse(fallbackResponse({ metrics, userContext, query }), { metrics, userContext, query });
   }
 }
 
@@ -321,17 +331,22 @@ function summarizeMeetingContext(meetingContext) {
   const createdAt = meetingContext.createdAt
     ? new Date(meetingContext.createdAt).toLocaleDateString()
     : "unknown date";
-  const transcript = meetingContext.transcript
-    ? String(meetingContext.transcript).slice(0, 240)
-    : null;
-  const plan = meetingContext.plan;
-  const planText = plan ? JSON.stringify(plan).slice(0, 240) : null;
+  const plan = meetingContext.plan || {};
+  const planSummary = Object.entries(plan)
+    .map(([key, value]) => {
+      if (!value || typeof value !== "object") {
+        return null;
+      }
+      const baseline = value.baseline ? String(value.baseline).slice(0, 160) : null;
+      const goals = Array.isArray(value.smartGoals) ? value.smartGoals.slice(0, 2) : [];
+      const goalText = goals.length ? `Goals: ${goals.join("; ")}` : null;
+      return [`${key}`, baseline, goalText].filter(Boolean).join(" | ");
+    })
+    .filter(Boolean)
+    .join(" || ");
   const parts = [`${name} (${createdAt})`];
-  if (transcript) {
-    parts.push(`Transcript excerpt: ${transcript}`);
-  }
-  if (planText) {
-    parts.push(`Plan excerpt: ${planText}`);
+  if (planSummary) {
+    parts.push(`Plan summary: ${planSummary}`);
   }
   return parts.join(" | ");
 }
@@ -341,7 +356,7 @@ module.exports = {
   generateCoachResponse,
 };
 
-function enrichResponse(response, { metrics, userContext }) {
+function enrichResponse(response, { metrics, userContext, query }) {
   const message = response.message || "";
   const needsExpansion = message.length < 300;
   const recommendations = Array.isArray(response.recommendations)
@@ -353,7 +368,8 @@ function enrichResponse(response, { metrics, userContext }) {
   }
 
   const expandedMessageParts = [message];
-  if (needsExpansion) {
+  const wantsAdvice = /plan|recommend|advice|suggest|improve|help|should i|next steps/i.test(query || "");
+  if (needsExpansion && wantsAdvice) {
     const sleepHours = metrics.average_sleep_hours;
     const steps = metrics.average_steps;
     const stress = metrics.stress_index;
@@ -415,23 +431,25 @@ function enrichResponse(response, { metrics, userContext }) {
 
   const enrichedRecommendations = recommendations.length
     ? recommendations
-    : [
-      {
-        category: "Sleep",
-        action: "Set a consistent bedtime for 4 nights this week",
-        priority: "high",
-      },
-      {
-        category: "Stress",
-        action: "Practice 5 minutes of slow breathing after work on 3 days",
-        priority: "medium",
-      },
-      {
-        category: "Activity",
-        action: "Add a 15-minute easy walk on 3 days",
-        priority: "low",
-      },
-    ];
+    : wantsAdvice
+      ? [
+          {
+            category: "Sleep",
+            action: "Set a consistent bedtime for 4 nights this week",
+            priority: "high",
+          },
+          {
+            category: "Stress",
+            action: "Practice 5 minutes of slow breathing after work on 3 days",
+            priority: "medium",
+          },
+          {
+            category: "Activity",
+            action: "Add a 15-minute easy walk on 3 days",
+            priority: "low",
+          },
+        ]
+      : [];
 
   if (!recommendations.length && userContext?.fitness_goal) {
     enrichedRecommendations.unshift({
