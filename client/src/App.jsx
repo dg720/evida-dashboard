@@ -4,7 +4,6 @@ import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import ChatCoach from "./pages/ChatCoach.jsx";
-import Upload from "./pages/Upload.jsx";
 
 function App() {
   return (
@@ -14,7 +13,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/chat" element={<ChatCoach />} />
-          <Route path="/upload" element={<Upload />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

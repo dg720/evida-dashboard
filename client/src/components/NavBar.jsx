@@ -4,7 +4,6 @@ const navItems = [
   { label: "Home", to: "/" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Chat Coach", to: "/chat" },
-  { label: "Upload Data", to: "/upload" },
 ];
 
 function NavBar() {

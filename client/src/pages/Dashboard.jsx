@@ -4,11 +4,8 @@ import {
   AreaChart,
   Bar,
   BarChart,
-  Brush,
   CartesianGrid,
   Legend,
-  Line,
-  LineChart,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
@@ -38,7 +35,7 @@ import {
 const tabs = ["Overview", "Activity", "Sleep", "Stress & Recovery", "Comparison"];
 
 function Dashboard() {
-  const { series, summary, currentPersonaId } = useAppContext();
+  const { series, summary, currentPersonaId, theme } = useAppContext();
   const [activeTab, setActiveTab] = useState(tabs[0]);
 
   const latestSeries = useMemo(() => getLatestDays(series, 14), [series]);
@@ -55,7 +52,7 @@ function Dashboard() {
       <div className="glass-card rounded-2xl p-8 text-center">
         <p className="font-display text-2xl font-semibold text-ink">No data loaded</p>
         <p className="mt-3 text-sm text-slate-500">
-          Select a persona on the home page or upload your own data to populate the dashboard.
+          Select a persona on the home page to populate the dashboard.
         </p>
       </div>
     );
@@ -349,28 +346,28 @@ function Dashboard() {
                 score={sleepScore}
                 headline={focusHeadlines.sleep[scoreBand(sleepScore)]}
                 helper="Based on sleep duration + efficiency."
-                accentColor="#ef4444"
+                accentColor={theme?.accent}
               />
               <FocusScoreCard
                 label="Heart health"
                 score={heartHealthScore}
                 headline={focusHeadlines.heart[scoreBand(heartHealthScore)]}
                 helper="Synthesized from recovery signals."
-                accentColor="#ef4444"
+                accentColor={theme?.accent}
               />
               <FocusScoreCard
                 label="Stress index"
                 score={summary?.stress_index ? Math.round(summary.stress_index) : null}
                 headline={focusHeadlines.stress[stressBand(summary?.stress_index)]}
                 helper="Track workload and recovery balance."
-                accentColor="#ef4444"
+                accentColor={theme?.accent}
               />
               <FocusScoreCard
                 label="Recovery readiness"
                 score={readiness ? Math.round(readiness) : null}
                 headline={focusHeadlines.recovery[scoreBand(readiness)]}
                 helper="Composite recovery indicator."
-                accentColor="#ef4444"
+                accentColor={theme?.accent}
               />
             </div>
           </section>
@@ -418,36 +415,44 @@ function Dashboard() {
                 Time-series signals from the last two weeks
               </p>
             </div>
-            <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-4 lg:grid-cols-2">
               <div className="glass-card rounded-2xl p-6">
                 <p className="text-sm font-semibold uppercase text-slate-500">Steps trend</p>
                 <div className="mt-4 h-64">
                   <ResponsiveContainer>
-                    <LineChart data={latestSeries}>
+                    <AreaChart data={latestSeries}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                       <YAxis />
                       <Tooltip />
-                      <Line type="monotone" dataKey="steps" stroke="var(--accent)" strokeWidth={2} />
-                      <Brush dataKey="date" height={20} stroke="var(--accent)" />
-                    </LineChart>
+                      <Area
+                        type="monotone"
+                        dataKey="steps"
+                        stroke="var(--accent)"
+                        fill="rgba(249, 115, 22, 0.18)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div className="glass-card rounded-2xl p-6">
-                <p className="text-sm font-semibold uppercase text-slate-500">Sleep trend</p>
+                <p className="text-sm font-semibold uppercase text-slate-500">Sleep duration</p>
                 <div className="mt-4 h-64">
                   <ResponsiveContainer>
-                    <LineChart data={latestSeries}>
+                    <AreaChart data={latestSeries}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                       <YAxis />
                       <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="sleep_hours" stroke="#0f766e" strokeWidth={2} />
-                      <Line type="monotone" dataKey="sleep_efficiency" stroke="#f97316" strokeWidth={2} />
-                      <Brush dataKey="date" height={20} stroke="var(--accent)" />
-                    </LineChart>
+                      <Area
+                        type="monotone"
+                        dataKey="sleep_hours"
+                        stroke="#0f766e"
+                        fill="rgba(15, 118, 110, 0.18)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
@@ -457,25 +462,48 @@ function Dashboard() {
       )}
 
       {activeTab === "Activity" && (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.6fr]">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="glass-card rounded-2xl p-6">
-            <p className="text-sm font-semibold uppercase text-slate-500">Steps & active minutes</p>
+            <p className="text-sm font-semibold uppercase text-slate-500">Steps</p>
             <div className="mt-4 h-72">
               <ResponsiveContainer>
-                <LineChart data={latestSeries}>
+                <AreaChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis />
                   <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="steps" stroke="var(--accent)" strokeWidth={2} />
-                  <Line type="monotone" dataKey="active_minutes" stroke="#0f766e" strokeWidth={2} />
-                  <Brush dataKey="date" height={20} stroke="var(--accent)" />
-                </LineChart>
+                  <Area
+                    type="monotone"
+                    dataKey="steps"
+                    stroke="var(--accent)"
+                    fill="rgba(249, 115, 22, 0.18)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
           <div className="glass-card rounded-2xl p-6">
+            <p className="text-sm font-semibold uppercase text-slate-500">Active minutes</p>
+            <div className="mt-4 h-72">
+              <ResponsiveContainer>
+                <AreaChart data={latestSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Area
+                    type="monotone"
+                    dataKey="active_minutes"
+                    stroke="#0f766e"
+                    fill="rgba(15, 118, 110, 0.18)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-6 lg:col-span-2">
             <p className="text-sm font-semibold uppercase text-slate-500">Weekly totals</p>
             <div className="mt-4 h-72">
               <ResponsiveContainer>
@@ -528,9 +556,9 @@ function Dashboard() {
       )}
 
       {activeTab === "Stress & Recovery" && (
-        <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="grid gap-4 lg:grid-cols-2">
           <div className="glass-card rounded-2xl p-6">
-            <p className="text-sm font-semibold uppercase text-slate-500">Stress & HRV</p>
+            <p className="text-sm font-semibold uppercase text-slate-500">Stress index</p>
             <div className="mt-4 h-72">
               <ResponsiveContainer>
                 <AreaChart data={latestSeries}>
@@ -538,15 +566,26 @@ function Dashboard() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis />
                   <Tooltip />
-                  <Legend />
                   <Area type="monotone" dataKey="stress_index" fill="#fecaca" stroke="#ef4444" />
-                  <Area type="monotone" dataKey="hrv_rmssd" fill="#bbf7d0" stroke="#16a34a" />
-                  <Brush dataKey="date" height={20} stroke="var(--accent)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
           <div className="glass-card rounded-2xl p-6">
+            <p className="text-sm font-semibold uppercase text-slate-500">HRV (RMSSD)</p>
+            <div className="mt-4 h-72">
+              <ResponsiveContainer>
+                <AreaChart data={latestSeries}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="hrv_rmssd" fill="#bbf7d0" stroke="#16a34a" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="glass-card rounded-2xl p-6 lg:col-span-2">
             <p className="text-sm font-semibold uppercase text-slate-500">Recovery readiness</p>
             <div className="mt-4">
               <div className="flex items-center justify-between">

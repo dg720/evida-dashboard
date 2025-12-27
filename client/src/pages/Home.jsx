@@ -64,25 +64,6 @@ function Home() {
         </div>
       </section>
 
-      <section className="glass-card rounded-2xl p-6 md:p-8">
-        <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <p className="font-display text-2xl font-semibold text-ink">Bring your own data</p>
-            <p className="mt-3 text-sm text-slate-600">
-              Upload CSV or JSON exports from your wearable to view the same charts and
-              recommendations. The dashboard keeps your data local unless you choose to share.
-            </p>
-          </div>
-          <div className="flex items-center justify-start md:justify-end">
-            <Link
-              to="/upload"
-              className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700"
-            >
-              Upload data
-            </Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
