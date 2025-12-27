@@ -372,12 +372,6 @@ function Dashboard() {
     );
   };
 
-  const lineColor = theme?.accent || "#0f766e";
-  const lineFill = hexToRgba(theme?.accent || "#0f766e", 0.12);
-  const stepsFill = lineFill;
-  const stressColor = theme?.accentDeep || "#ef4444";
-  const stressFill = hexToRgba(stressColor, 0.12);
-
   const hexToRgba = (hex, alpha) => {
     if (!hex) {
       return `rgba(15, 118, 110, ${alpha})`;
@@ -391,6 +385,12 @@ function Dashboard() {
     const b = parseInt(normalized.slice(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
+
+  const lineColor = theme?.accent || "#0f766e";
+  const lineFill = hexToRgba(lineColor, 0.12);
+  const stepsFill = lineFill;
+  const stressColor = theme?.accentDeep || "#ef4444";
+  const stressFill = hexToRgba(stressColor, 0.12);
 
   const sleepStageColors = {
     light: hexToRgba(theme?.accent, 0.3),
