@@ -324,6 +324,26 @@ function Dashboard() {
   const isActiveAlex = currentPersonaId === "active-alex";
   const stepsFill = isActiveAlex ? "rgba(34, 197, 94, 0.12)" : "rgba(249, 115, 22, 0.12)";
 
+  const hexToRgba = (hex, alpha) => {
+    if (!hex) {
+      return `rgba(15, 118, 110, ${alpha})`;
+    }
+    const normalized = hex.replace("#", "");
+    if (normalized.length !== 6) {
+      return `rgba(15, 118, 110, ${alpha})`;
+    }
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const sleepStageColors = {
+    light: hexToRgba(theme?.accent, 0.3),
+    rem: hexToRgba(theme?.accent, 0.6),
+    deep: theme?.accentDeep || "#0f766e",
+  };
+
   const scoreBand = (value) => {
     if (value === null || value === undefined) {
       return "Unknown";
@@ -602,18 +622,30 @@ function Dashboard() {
                   <YAxis />
                   <Tooltip />
                   <Legend
-                    formatter={(value) => {
-                      const labels = {
-                        sleep_stage_light: "Light sleep",
-                        sleep_stage_deep: "Deep sleep",
-                        sleep_stage_rem: "REM sleep",
-                      };
-                      return labels[value] || value;
-                    }}
+                    content={({ payload }) => (
+                      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                        {(payload || []).map((entry) => (
+                          <div key={entry.value} className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full"
+                              style={{ backgroundColor: entry.color }}
+                            />
+                            <span className="uppercase tracking-wide">
+                              {entry.value
+                                .replace("sleep_stage_", "")
+                                .replace("rem", "REM")
+                                .replace("light", "Light")
+                                .replace("deep", "Deep")}{" "}
+                              sleep
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   />
-                  <Bar dataKey="sleep_stage_light" stackId="sleep" fill="var(--accent-soft)" />
-                  <Bar dataKey="sleep_stage_deep" stackId="sleep" fill="var(--accent-deep)" />
-                  <Bar dataKey="sleep_stage_rem" stackId="sleep" fill="var(--accent)" />
+                  <Bar dataKey="sleep_stage_light" stackId="sleep" fill={sleepStageColors.light} />
+                  <Bar dataKey="sleep_stage_deep" stackId="sleep" fill={sleepStageColors.deep} />
+                  <Bar dataKey="sleep_stage_rem" stackId="sleep" fill={sleepStageColors.rem} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -713,7 +745,7 @@ function Dashboard() {
                   <RadarChart data={radarData}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11 }} />
-                    <PolarRadiusAxis angle={30} domain={[0, 150]} tick={{ fontSize: 10 }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 150]} tick={false} axisLine={false} />
                     <Radar
                       name="Baseline"
                       dataKey="baseline"

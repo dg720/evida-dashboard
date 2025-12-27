@@ -52,7 +52,7 @@ function RangeMetricCard({
       <div className="relative mt-4 h-2 rounded-full bg-slate-200">
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/60 to-transparent" />
         <div
-          className="absolute -top-1 h-4 w-4 rounded-full border-2 border-white bg-accent shadow"
+          className="absolute -top-1 h-4 w-4 rounded-full border-2 border-white bg-slate-800 shadow"
           style={{ left: `calc(${markerPosition}% - 0.5rem)` }}
         />
       </div>

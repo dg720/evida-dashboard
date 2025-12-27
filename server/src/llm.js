@@ -187,25 +187,45 @@ function parseModelResponse(content) {
     return { message: "I couldn't generate a response at the moment." };
   }
 
-  let parsed;
+  const cleaned = stripCodeFences(content).trim();
+  const parsed = safeParseJson(cleaned);
+  if (parsed && parsed.message) {
+    return {
+      message: stripDisclaimer(parsed.message),
+      recommendations: Array.isArray(parsed.recommendations)
+        ? parsed.recommendations
+        : undefined,
+    };
+  }
+
+  const extracted = extractMessageFromJson(cleaned);
+  if (extracted) {
+    return { message: stripDisclaimer(extracted) };
+  }
+
+  return { message: stripDisclaimer(cleaned) };
+}
+
+function stripCodeFences(text) {
+  return text
+    .replace(/^\s*```(?:json)?/i, "")
+    .replace(/```\s*$/i, "");
+}
+
+function safeParseJson(text) {
   try {
-    parsed = JSON.parse(content);
+    return JSON.parse(text);
   } catch {
-    return { message: stripDisclaimer(content) };
+    return null;
   }
+}
 
-  if (!parsed.message) {
-    return { message: stripDisclaimer(content) };
+function extractMessageFromJson(text) {
+  const match = text.match(/"message"\s*:\s*"([^"]*)"/);
+  if (!match) {
+    return null;
   }
-
-  const recommendations = Array.isArray(parsed.recommendations)
-    ? parsed.recommendations
-    : undefined;
-
-  return {
-    message: stripDisclaimer(parsed.message),
-    recommendations,
-  };
+  return match[1].replace(/\\n/g, "\n");
 }
 
 function stripDisclaimer(message) {
