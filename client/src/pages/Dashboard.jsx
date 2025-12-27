@@ -257,6 +257,69 @@ function Dashboard() {
     return Number(value).toFixed(1);
   };
 
+  const scoreBand = (value) => {
+    if (value === null || value === undefined) {
+      return "Unknown";
+    }
+    if (value >= 80) {
+      return "Optimal";
+    }
+    if (value >= 65) {
+      return "Steady";
+    }
+    if (value >= 50) {
+      return "Elevated";
+    }
+    return "High";
+  };
+
+  const stressBand = (value) => {
+    if (value === null || value === undefined) {
+      return "Unknown";
+    }
+    if (value <= 35) {
+      return "Calm";
+    }
+    if (value <= 55) {
+      return "Balanced";
+    }
+    if (value <= 70) {
+      return "Elevated";
+    }
+    return "High";
+  };
+
+  const focusHeadlines = {
+    sleep: {
+      Optimal: "Restorative sleep",
+      Steady: "Solid recovery",
+      Elevated: "Sleep could improve",
+      High: "Prioritize rest",
+      Unknown: "Sleep data missing",
+    },
+    heart: {
+      Optimal: "Heart health strong",
+      Steady: "Stable heart health",
+      Elevated: "Watch recovery load",
+      High: "Recovery needs focus",
+      Unknown: "Heart score missing",
+    },
+    stress: {
+      Calm: "Calm baseline",
+      Balanced: "Stress in check",
+      Elevated: "Stress building",
+      High: "High stress load",
+      Unknown: "Stress data missing",
+    },
+    recovery: {
+      Optimal: "Ready for more",
+      Steady: "Recovery on track",
+      Elevated: "Ease intensity",
+      High: "Recovery needed",
+      Unknown: "Recovery data missing",
+    },
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -284,30 +347,30 @@ function Dashboard() {
               <FocusScoreCard
                 label="Sleep score"
                 score={sleepScore}
-                caption="Higher than usual"
+                headline={focusHeadlines.sleep[scoreBand(sleepScore)]}
                 helper="Based on sleep duration + efficiency."
-                accentColor="#0f766e"
+                accentColor="#ef4444"
               />
               <FocusScoreCard
                 label="Heart health"
                 score={heartHealthScore}
-                caption="Steady baseline"
+                headline={focusHeadlines.heart[scoreBand(heartHealthScore)]}
                 helper="Synthesized from recovery signals."
-                accentColor="#22c55e"
+                accentColor="#ef4444"
               />
               <FocusScoreCard
                 label="Stress index"
                 score={summary?.stress_index ? Math.round(summary.stress_index) : null}
-                caption="Lower is calmer"
+                headline={focusHeadlines.stress[stressBand(summary?.stress_index)]}
                 helper="Track workload and recovery balance."
                 accentColor="#ef4444"
               />
               <FocusScoreCard
                 label="Recovery readiness"
                 score={readiness ? Math.round(readiness) : null}
-                caption="Resilient"
+                headline={focusHeadlines.recovery[scoreBand(readiness)]}
                 helper="Composite recovery indicator."
-                accentColor="#f97316"
+                accentColor="#ef4444"
               />
             </div>
           </section>
