@@ -115,9 +115,13 @@ function ChatCoach() {
     return withBreaks.replace(/\n{3,}/g, "\n\n").trim();
   }
 
+  function collapseNumberedParagraphs(text) {
+    return text.replace(/\n\n(\d+\.\s+)/g, "\n$1");
+  }
+
   function normalizeAssistantText(text) {
     const withRounded = formatRoundedNumbers(text);
-    return formatNumberedLists(withRounded);
+    return collapseNumberedParagraphs(formatNumberedLists(withRounded));
   }
 
   function renderAssistantMessage(content) {
@@ -347,71 +351,70 @@ function ChatCoach() {
 
   return (
     <div className="space-y-6">
-      <SectionHeader
-        title="Health Coach"
-        subtitle="Uses your wearable data and uploaded coaching sessions for context."
-        action={
-          <div className="flex w-full flex-wrap items-center gap-3">
+      <div className="mb-6 space-y-3">
+        <div>
+          <p className="font-display text-2xl font-semibold text-ink">Health Coach</p>
+          <p className="text-sm text-slate-500">
+            Uses your wearable data and uploaded coaching sessions for context.
+          </p>
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">Persona</span>
+            <select
+              value={currentPersonaId || ""}
+              onChange={(event) => setCurrentPersonaId(event.target.value)}
+              className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+            >
+              {personas.map((persona) => (
+                <option key={persona.id} value={persona.id}>
+                  {persona.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
               <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                Persona
+                Meeting
               </span>
               <select
-                value={currentPersonaId || ""}
-                onChange={(event) => setCurrentPersonaId(event.target.value)}
+                value={meetingId}
+                onChange={(event) => setMeetingId(event.target.value)}
                 className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+                disabled={meetingLoading || !meetingOptions.length}
               >
-                {personas.map((persona) => (
-                  <option key={persona.id} value={persona.id}>
-                    {persona.name}
-                  </option>
-                ))}
+                {meetingOptions.length ? (
+                  meetingOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label}
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No meetings found</option>
+                )}
               </select>
             </div>
-            <div className="hidden flex-1 md:block" />
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Meeting
-                </span>
-                <select
-                  value={meetingId}
-                  onChange={(event) => setMeetingId(event.target.value)}
-                  className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
-                  disabled={meetingLoading || !meetingOptions.length}
-                >
-                  {meetingOptions.length ? (
-                    meetingOptions.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.label}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No meetings found</option>
-                  )}
-                </select>
-              </div>
-              {activeContext ? (
-                <button
-                  type="button"
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
-                  onClick={() => setActiveContext(null)}
-                >
-                  Clear context
-                </button>
-              ) : null}
+            {activeContext ? (
               <button
                 type="button"
-                className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
-                onClick={importMeeting}
-                disabled={meetingLoading || !meetingId}
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
+                onClick={() => setActiveContext(null)}
               >
-                {meetingLoading ? "Loading..." : "Import meeting"}
+                Clear context
               </button>
-            </div>
+            ) : null}
+            <button
+              type="button"
+              className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
+              onClick={importMeeting}
+              disabled={meetingLoading || !meetingId}
+            >
+              {meetingLoading ? "Loading..." : "Import meeting"}
+            </button>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       {meetingError ? <p className="text-xs text-rose-500">{meetingError}</p> : null}
 
