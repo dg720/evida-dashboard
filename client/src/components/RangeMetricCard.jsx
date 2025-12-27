@@ -18,6 +18,24 @@ function RangeMetricCard({
   const badgeStyle = STATUS_STYLES[status] || STATUS_STYLES.neutral;
   const statusLabel = status === "neutral" ? "Baseline" : status.charAt(0).toUpperCase() + status.slice(1);
   const markerPosition = Math.max(0, Math.min(percentile, 100));
+  const trendDirection = trendText?.toLowerCase().startsWith("up")
+    ? "up"
+    : trendText?.toLowerCase().startsWith("down")
+      ? "down"
+      : "flat";
+  const trendColor =
+    trendDirection === "up" ? "#16a34a" : trendDirection === "down" ? "#ef4444" : "#94a3b8";
+  const arrowStyle =
+    trendDirection === "flat"
+      ? null
+      : {
+          width: 0,
+          height: 0,
+          borderLeft: "4px solid transparent",
+          borderRight: "4px solid transparent",
+          borderBottom: `6px solid ${trendColor}`,
+          transform: trendDirection === "down" ? "rotate(180deg)" : "none",
+        };
 
   return (
     <div className="glass-card rounded-2xl p-5">
@@ -39,7 +57,10 @@ function RangeMetricCard({
         />
       </div>
       <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-        <span>{trendLabel}</span>
+        <span className="inline-flex items-center gap-1">
+          {trendDirection === "flat" ? null : <span style={arrowStyle} />}
+          <span style={{ color: trendColor }}>{trendLabel}</span>
+        </span>
         <span>{trendText}</span>
       </div>
       {detail ? <p className="mt-2 text-sm text-slate-500">{detail}</p> : null}

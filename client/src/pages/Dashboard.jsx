@@ -267,6 +267,9 @@ function Dashboard() {
     return `${month}/${day}`;
   };
 
+  const isActiveAlex = currentPersonaId === "active-alex";
+  const stepsFill = isActiveAlex ? "rgba(34, 197, 94, 0.12)" : "rgba(249, 115, 22, 0.12)";
+
   const scoreBand = (value) => {
     if (value === null || value === undefined) {
       return "Unknown";
@@ -442,7 +445,7 @@ function Dashboard() {
                         type="monotone"
                         dataKey="steps"
                         stroke="var(--accent)"
-                        fill="rgba(249, 115, 22, 0.12)"
+                        fill={stepsFill}
                         strokeWidth={2}
                       />
                     </AreaChart>
@@ -489,7 +492,7 @@ function Dashboard() {
                     type="monotone"
                     dataKey="steps"
                     stroke="var(--accent)"
-                    fill="rgba(249, 115, 22, 0.12)"
+                    fill={stepsFill}
                     strokeWidth={2}
                   />
                 </AreaChart>
@@ -545,24 +548,26 @@ function Dashboard() {
                   <YAxis />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="sleep_stage_light" stackId="sleep" fill="#60a5fa" />
-                  <Bar dataKey="sleep_stage_deep" stackId="sleep" fill="#1d4ed8" />
-                  <Bar dataKey="sleep_stage_rem" stackId="sleep" fill="#f59e0b" />
+                  <Bar dataKey="sleep_stage_light" stackId="sleep" fill="var(--accent-soft)" />
+                  <Bar dataKey="sleep_stage_deep" stackId="sleep" fill="var(--accent-deep)" />
+                  <Bar dataKey="sleep_stage_rem" stackId="sleep" fill="var(--accent)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="glass-card rounded-2xl p-6 space-y-4">
+          <div className="grid h-full grid-rows-2 gap-4">
             <StatCard
               label="Sleep efficiency"
               value={formatNumber(summary?.sleep_efficiency, "")}
               detail="Healthy range: 0.85+"
               accent
+              className="h-full"
             />
             <StatCard
               label="Total sleep (avg)"
               value={formatNumber(summary?.average_sleep_hours, " h")}
               detail="Aim for 7-9 hours"
+              className="h-full"
             />
           </div>
         </div>
@@ -637,6 +642,9 @@ function Dashboard() {
           <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
             <div className="glass-card rounded-2xl p-6">
               <p className="text-sm font-semibold uppercase text-slate-500">Performance radar</p>
+              <p className="mt-2 text-sm text-slate-500">
+                The hatched area represents the baseline benchmark.
+              </p>
               <div className="mt-6 h-[26rem]">
                 <ResponsiveContainer>
                   <RadarChart data={radarData}>
@@ -657,7 +665,6 @@ function Dashboard() {
                       fill="var(--accent)"
                       fillOpacity={0.35}
                     />
-                    <Legend wrapperStyle={{ paddingTop: "16px" }} />
                     <Tooltip />
                     <defs>
                       <pattern id="baselineHatch" width="6" height="6" patternUnits="userSpaceOnUse">
@@ -666,6 +673,22 @@ function Dashboard() {
                     </defs>
                   </RadarChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                <div className="glass-card rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-ink">Steps are below baseline</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    You are averaging fewer steps than the benchmark range. Aim for one extra
+                    15-minute walk to close the gap.
+                  </p>
+                </div>
+                <div className="glass-card rounded-2xl p-4">
+                  <p className="text-sm font-semibold text-ink">HRV is trending stronger</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Higher HRV suggests better recovery versus baseline. Maintain consistent sleep
+                    timing to keep momentum.
+                  </p>
+                </div>
               </div>
             </div>
             <div className="grid gap-4">

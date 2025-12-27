@@ -1,6 +1,6 @@
-function StatCard({ label, value, detail, accent }) {
+function StatCard({ label, value, detail, accent, className = "" }) {
   return (
-    <div className="glass-card rounded-2xl p-5">
+    <div className={["glass-card rounded-2xl p-5", className].join(" ").trim()}>
       <div className="flex items-center justify-between">
         <p className="text-sm uppercase tracking-wide text-slate-500">{label}</p>
       </div>
