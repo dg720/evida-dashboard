@@ -9,13 +9,13 @@ function Home() {
     <div className="space-y-12">
       <section className="gradient-border">
         <div className="glass-card rounded-[18px] p-8 md:p-10">
-          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Wearables, simplified</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-slate-500">Health data, simplified.</p>
           <h1 className="mt-4 font-display text-4xl font-semibold text-ink md:text-5xl">
-            See the story behind your steps, sleep, and stress.
+            See the story behind your data.
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-slate-600">
-            Evida turns raw wearable data into a calm, readable dashboard and a supportive Health
-            Coach. Compare personas, spot trends, and set smarter micro-goals.
+            Evida turns raw wearable data into a modern dashboard, paired with an context-powered AI
+            Health Coach. Compare personas, spot trends, and set SMART goals.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
@@ -54,9 +54,6 @@ function Home() {
             >
               <div className="flex items-center justify-between">
                 <p className="font-display text-xl font-semibold text-ink">{persona.name}</p>
-                <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accentDeep">
-                  {persona.days} days
-                </span>
               </div>
               <p className="text-sm text-slate-600">{persona.description}</p>
             </button>

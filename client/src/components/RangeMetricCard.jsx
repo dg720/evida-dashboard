@@ -16,6 +16,7 @@ function RangeMetricCard({
   detail,
 }) {
   const badgeStyle = STATUS_STYLES[status] || STATUS_STYLES.neutral;
+  const statusLabel = status === "neutral" ? "Baseline" : status.charAt(0).toUpperCase() + status.slice(1);
   const markerPosition = Math.max(0, Math.min(percentile, 100));
 
   return (
@@ -23,7 +24,7 @@ function RangeMetricCard({
       <div className="flex items-center justify-between">
         <p className="text-sm uppercase tracking-wide text-slate-500">{label}</p>
         <span className={`rounded-full px-3 py-1 text-xs font-semibold ${badgeStyle}`}>
-          {status === "neutral" ? "Baseline" : status}
+          {statusLabel}
         </span>
       </div>
       <div className="mt-3 flex items-baseline gap-2">
@@ -31,6 +32,7 @@ function RangeMetricCard({
         {unit ? <span className="text-sm text-slate-500">{unit}</span> : null}
       </div>
       <div className="relative mt-4 h-2 rounded-full bg-slate-200">
+        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/60 to-transparent" />
         <div
           className="absolute -top-1 h-4 w-4 rounded-full border-2 border-white bg-accent shadow"
           style={{ left: `calc(${markerPosition}% - 0.5rem)` }}

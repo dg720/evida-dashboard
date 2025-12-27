@@ -11,12 +11,12 @@ function NavBar() {
     <header className="sticky top-0 z-20 border-b border-slate-200/60 bg-white/70 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-white shadow-glow">
-            <span className="font-display text-lg font-semibold">E</span>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 shadow-glow">
+            <img src="/evida-icon.png" alt="Evida icon" className="h-6 w-6" />
           </div>
           <div>
             <p className="font-display text-lg font-semibold text-ink">Evida</p>
-            <p className="text-xs text-slate-500">Wearables Health Coach</p>
+            <p className="text-xs text-slate-500">Wearables Health Dashboard & Coach</p>
           </div>
         </div>
         <nav className="hidden gap-4 md:flex">

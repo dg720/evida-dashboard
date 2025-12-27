@@ -1,7 +1,7 @@
 function FocusScoreCard({ label, score, headline, helper, accentColor = "#f97316" }) {
   const value = score ?? 0;
-  const radius = 46;
-  const circumference = 2 * Math.PI * radius;
+  const ringRadius = 30;
+  const circumference = 2 * Math.PI * ringRadius;
   const progress = Math.max(0, Math.min(value, 100));
   const dashOffset = circumference - (progress / 100) * circumference;
 
@@ -14,7 +14,7 @@ function FocusScoreCard({ label, score, headline, helper, accentColor = "#f97316
             <circle
               cx="40"
               cy="40"
-              r={radius - 16}
+              r={ringRadius}
               stroke="#e2e8f0"
               strokeWidth="8"
               fill="none"
@@ -22,7 +22,7 @@ function FocusScoreCard({ label, score, headline, helper, accentColor = "#f97316
             <circle
               cx="40"
               cy="40"
-              r={radius - 16}
+              r={ringRadius}
               stroke={accentColor}
               strokeWidth="8"
               fill="none"

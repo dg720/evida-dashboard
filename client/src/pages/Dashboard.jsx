@@ -32,7 +32,7 @@ import {
   groupByWeek,
 } from "../lib/metrics.js";
 
-const tabs = ["Overview", "Activity", "Sleep", "Stress & Recovery", "Comparison"];
+const tabs = ["Overview", "Activity", "Sleep", "Stress & Recovery", "Benchmarking"];
 
 function Dashboard() {
   const { series, summary, currentPersonaId, theme } = useAppContext();
@@ -254,6 +254,19 @@ function Dashboard() {
     return Number(value).toFixed(1);
   };
 
+  const formatMonthDay = (value) => {
+    if (!value) {
+      return "";
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return value;
+    }
+    const month = date.getUTCMonth() + 1;
+    const day = date.getUTCDate();
+    return `${month}/${day}`;
+  };
+
   const scoreBand = (value) => {
     if (value === null || value === undefined) {
       return "Unknown";
@@ -422,14 +435,14 @@ function Dashboard() {
                   <ResponsiveContainer>
                     <AreaChart data={latestSeries}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                       <YAxis />
                       <Tooltip />
                       <Area
                         type="monotone"
                         dataKey="steps"
                         stroke="var(--accent)"
-                        fill="rgba(249, 115, 22, 0.18)"
+                        fill="rgba(249, 115, 22, 0.12)"
                         strokeWidth={2}
                       />
                     </AreaChart>
@@ -442,14 +455,14 @@ function Dashboard() {
                   <ResponsiveContainer>
                     <AreaChart data={latestSeries}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                       <YAxis />
                       <Tooltip />
                       <Area
                         type="monotone"
                         dataKey="sleep_hours"
                         stroke="#0f766e"
-                        fill="rgba(15, 118, 110, 0.18)"
+                        fill="rgba(15, 118, 110, 0.12)"
                         strokeWidth={2}
                       />
                     </AreaChart>
@@ -469,14 +482,14 @@ function Dashboard() {
               <ResponsiveContainer>
                 <AreaChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
                   <Tooltip />
                   <Area
                     type="monotone"
                     dataKey="steps"
                     stroke="var(--accent)"
-                    fill="rgba(249, 115, 22, 0.18)"
+                    fill="rgba(249, 115, 22, 0.12)"
                     strokeWidth={2}
                   />
                 </AreaChart>
@@ -489,14 +502,14 @@ function Dashboard() {
               <ResponsiveContainer>
                 <AreaChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
                   <Tooltip />
                   <Area
                     type="monotone"
                     dataKey="active_minutes"
                     stroke="#0f766e"
-                    fill="rgba(15, 118, 110, 0.18)"
+                    fill="rgba(15, 118, 110, 0.12)"
                     strokeWidth={2}
                   />
                 </AreaChart>
@@ -528,7 +541,7 @@ function Dashboard() {
               <ResponsiveContainer>
                 <BarChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
                   <Tooltip />
                   <Legend />
@@ -563,10 +576,15 @@ function Dashboard() {
               <ResponsiveContainer>
                 <AreaChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                  <YAxis />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
+                  <YAxis domain={[0, 100]} tickCount={6} />
                   <Tooltip />
-                  <Area type="monotone" dataKey="stress_index" fill="#fecaca" stroke="#ef4444" />
+                  <Area
+                    type="monotone"
+                    dataKey="stress_index"
+                    fill="rgba(239, 68, 68, 0.12)"
+                    stroke="#ef4444"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -577,10 +595,15 @@ function Dashboard() {
               <ResponsiveContainer>
                 <AreaChart data={latestSeries}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={formatMonthDay} />
                   <YAxis />
                   <Tooltip />
-                  <Area type="monotone" dataKey="hrv_rmssd" fill="#bbf7d0" stroke="#16a34a" />
+                  <Area
+                    type="monotone"
+                    dataKey="hrv_rmssd"
+                    fill="rgba(22, 163, 74, 0.12)"
+                    stroke="#16a34a"
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -609,20 +632,12 @@ function Dashboard() {
         </div>
       )}
 
-      {activeTab === "Comparison" && (
+      {activeTab === "Benchmarking" && (
         <div className="space-y-6">
-          <div className="glass-card rounded-2xl p-6">
-            <p className="text-sm font-semibold uppercase text-slate-500">Baseline comparison</p>
-            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <span>Population baselines: steps 8k, sleep 7.5h, stress 40, resting HR 65 bpm, HRV 50 ms.</span>
-              <span>{trendLabel} changes shown on benchmark cards.</span>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
             <div className="glass-card rounded-2xl p-6">
               <p className="text-sm font-semibold uppercase text-slate-500">Performance radar</p>
-              <div className="mt-4 h-80">
+              <div className="mt-6 h-[26rem]">
                 <ResponsiveContainer>
                   <RadarChart data={radarData}>
                     <PolarGrid />
@@ -632,8 +647,8 @@ function Dashboard() {
                       name="Baseline"
                       dataKey="baseline"
                       stroke="#94a3b8"
-                      fill="#cbd5f5"
-                      fillOpacity={0.2}
+                      fill="url(#baselineHatch)"
+                      fillOpacity={0.35}
                     />
                     <Radar
                       name="Current"
@@ -642,8 +657,13 @@ function Dashboard() {
                       fill="var(--accent)"
                       fillOpacity={0.35}
                     />
-                    <Legend />
+                    <Legend wrapperStyle={{ paddingTop: "16px" }} />
                     <Tooltip />
+                    <defs>
+                      <pattern id="baselineHatch" width="6" height="6" patternUnits="userSpaceOnUse">
+                        <path d="M0 6L6 0" stroke="#94a3b8" strokeWidth="1" />
+                      </pattern>
+                    </defs>
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
