@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import SectionHeader from "../components/SectionHeader.jsx";
 import { useAppContext } from "../context/AppContext.jsx";
-import { apiFetch } from "../lib/api.js";
+import { apiFetch, SCRIBE_API_BASE_URL } from "../lib/api.js";
 
 function ChatCoach() {
   const { summary, series, userContext } = useAppContext();
@@ -14,11 +14,66 @@ function ChatCoach() {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [meetingOptions, setMeetingOptions] = useState([]);
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingLoading, setMeetingLoading] = useState(false);
+  const [meetingError, setMeetingError] = useState("");
+  const [activeContext, setActiveContext] = useState(null);
+  const [showImporter, setShowImporter] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  async function loadMeetings() {
+    setMeetingLoading(true);
+    setMeetingError("");
+    try {
+      const response = await fetch(`${SCRIBE_API_BASE_URL}/api/meetings`);
+      if (!response.ok) {
+        throw new Error("Unable to load meetings.");
+      }
+      const meetings = await response.json();
+      const options = (meetings || []).map((meeting) => ({
+        id: meeting.id,
+        label: `${meeting.patientDisplayName || "Meeting"} - ${new Date(
+          meeting.createdAt
+        ).toLocaleDateString()}`,
+      }));
+      setMeetingOptions(options);
+      if (options.length && !meetingId) {
+        setMeetingId(options[0].id);
+      }
+    } catch (error) {
+      setMeetingError(error.message || "Unable to load meetings.");
+    } finally {
+      setMeetingLoading(false);
+    }
+  }
+
+  async function importMeeting() {
+    if (!meetingId) {
+      return;
+    }
+    setMeetingLoading(true);
+    setMeetingError("");
+    try {
+      const response = await fetch(
+        `${SCRIBE_API_BASE_URL}/api/meetings/${encodeURIComponent(meetingId)}`
+      );
+      if (!response.ok) {
+        throw new Error("Unable to import meeting.");
+      }
+      const detail = await response.json();
+      setActiveContext(detail);
+      setShowImporter(false);
+    } catch (error) {
+      setMeetingError(error.message || "Unable to import meeting.");
+    } finally {
+      setMeetingLoading(false);
+    }
+  }
 
   function renderInlineBold(text) {
     const segments = text.split("**");
@@ -89,6 +144,17 @@ function ChatCoach() {
           user_context: userContext,
           query: userMessage.content,
           series,
+          meeting_context: activeContext
+            ? {
+                id: activeContext.id,
+                patientDisplayName: activeContext.patientDisplayName,
+                createdAt: activeContext.createdAt,
+                transcript: activeContext.transcript
+                  ? String(activeContext.transcript).slice(0, 2000)
+                  : null,
+                plan: activeContext.plan ? JSON.parse(JSON.stringify(activeContext.plan)) : null,
+              }
+            : null,
         }),
       });
       setMessages((prev) => [
@@ -114,7 +180,74 @@ function ChatCoach() {
       <SectionHeader
         title="Chat Coach"
         subtitle="Ask about your sleep, training, stress, or recovery."
+        action={
+          <div className="flex items-center gap-2">
+            {activeContext ? (
+              <button
+                type="button"
+                className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600"
+                onClick={() => setActiveContext(null)}
+              >
+                Clear context
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
+              onClick={() => {
+                setShowImporter((prev) => !prev);
+                if (!meetingOptions.length) {
+                  loadMeetings();
+                }
+              }}
+            >
+              Import meeting
+            </button>
+          </div>
+        }
       />
+
+      {showImporter ? (
+        <div className="glass-card rounded-2xl p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <select
+              value={meetingId}
+              onChange={(event) => setMeetingId(event.target.value)}
+              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm"
+              disabled={meetingLoading || !meetingOptions.length}
+            >
+              {meetingOptions.length ? (
+                meetingOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.label}
+                  </option>
+                ))
+              ) : (
+                <option value="">No meetings found</option>
+              )}
+            </select>
+            <button
+              type="button"
+              onClick={importMeeting}
+              className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-glow"
+              disabled={meetingLoading || !meetingId}
+            >
+              {meetingLoading ? "Loading..." : "Use meeting"}
+            </button>
+          </div>
+          {meetingError ? <p className="mt-3 text-xs text-rose-500">{meetingError}</p> : null}
+        </div>
+      ) : null}
+
+      {activeContext ? (
+        <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/70 px-4 py-3 text-xs text-emerald-700">
+          Active context: {activeContext.patientDisplayName || "Imported meeting"} on{" "}
+          {activeContext.createdAt
+            ? new Date(activeContext.createdAt).toLocaleDateString()
+            : "unknown date"}
+          .
+        </div>
+      ) : null}
 
       <div className="glass-card flex h-[60vh] flex-col rounded-2xl">
         <div className="flex-1 space-y-4 overflow-y-auto p-6">

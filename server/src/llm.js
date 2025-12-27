@@ -47,7 +47,7 @@ function buildFitnessSummary(metrics, stats) {
   return `Steps: ${steps}. Calories: ${calories}. Resting HR: ${restingHr}${hrVarText}. HRV: ${hrv}${hrvVarText}.`;
 }
 
-function buildPrompt({ metrics, userContext, query, stats }) {
+function buildPrompt({ metrics, userContext, query, stats, meetingContext }) {
   const sleepQuery =
     /sleep|insomnia|tired|fatigue|bedtime|rest/i.test(query || "") ||
     /sleep/i.test(userContext?.sleep_goal || "");
@@ -145,8 +145,11 @@ function buildPrompt({ metrics, userContext, query, stats }) {
     contextLine ? `User context: ${contextLine}.` : "User context: not provided.",
     summaryLine,
     ...frameworkLines,
+    meetingContext ? `Imported meeting context: ${summarizeMeetingContext(meetingContext)}` : null,
     `User question: ${query || "No question provided."}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return { systemMessage, userMessage };
 }
@@ -292,12 +295,13 @@ function fallbackResponse({ metrics, userContext }) {
   };
 }
 
-async function generateCoachResponse({ metrics, userContext, query, stats }) {
+async function generateCoachResponse({ metrics, userContext, query, stats, meetingContext }) {
   const { systemMessage, userMessage } = buildPrompt({
     metrics,
     userContext,
     query,
     stats,
+    meetingContext,
   });
 
   try {
@@ -307,6 +311,29 @@ async function generateCoachResponse({ metrics, userContext, query, stats }) {
   } catch {
     return enrichResponse(fallbackResponse({ metrics, userContext }), { metrics, userContext });
   }
+}
+
+function summarizeMeetingContext(meetingContext) {
+  if (!meetingContext || typeof meetingContext !== "object") {
+    return "not provided.";
+  }
+  const name = meetingContext.patientDisplayName || meetingContext.id || "meeting";
+  const createdAt = meetingContext.createdAt
+    ? new Date(meetingContext.createdAt).toLocaleDateString()
+    : "unknown date";
+  const transcript = meetingContext.transcript
+    ? String(meetingContext.transcript).slice(0, 240)
+    : null;
+  const plan = meetingContext.plan;
+  const planText = plan ? JSON.stringify(plan).slice(0, 240) : null;
+  const parts = [`${name} (${createdAt})`];
+  if (transcript) {
+    parts.push(`Transcript excerpt: ${transcript}`);
+  }
+  if (planText) {
+    parts.push(`Plan excerpt: ${planText}`);
+  }
+  return parts.join(" | ");
 }
 
 module.exports = {

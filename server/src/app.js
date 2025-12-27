@@ -184,13 +184,14 @@ app.post("/chat", async (req, res) => {
     return;
   }
 
-  const { metrics, user_context: userContext, query, series } = req.body;
+  const { metrics, user_context: userContext, query, series, meeting_context: meetingContext } = req.body;
   const stats = series ? summarizeSeries(series) : { variance: {} };
 
   const coachResponse = await generateCoachResponse({
     metrics,
     userContext,
     query,
+    meetingContext,
     stats: {
       average_sleep_hours: { variance: stats.variance.average_sleep_hours },
       average_resting_hr: { variance: stats.variance.average_resting_hr },
