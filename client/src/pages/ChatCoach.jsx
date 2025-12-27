@@ -111,7 +111,7 @@ function ChatCoach() {
   }
 
   function formatNumberedLists(text) {
-    const withBreaks = text.replace(/(\s|^)(\d+)\.\s+/g, "\n\n$2. ");
+    const withBreaks = text.replace(/(^|\s)\s*(\d+)[\.\)]\s+/g, "\n\n$2. ");
     return withBreaks.replace(/\n{3,}/g, "\n\n").trim();
   }
 
@@ -125,7 +125,9 @@ function ChatCoach() {
     const blocks = normalizedContent.split(/\n\n+/).filter(Boolean);
     return blocks.map((block, blockIndex) => {
       const lines = block.split("\n").filter(Boolean);
-      const numberedOnly = lines.length > 0 && lines.every((line) => /^\d+\.\s+/.test(line.trim()));
+      const numberedOnly =
+        lines.length > 0 &&
+        lines.every((line) => /^\d+\.\s+/.test(line.trim()) || /^\d+\)\s+/.test(line.trim()));
       const hasHeading = lines[0]?.includes("**");
       const listLines = hasHeading ? lines.slice(1) : lines;
       const listOnly = listLines.length > 0 && listLines.every((line) => line.trim().startsWith("- "));
@@ -190,38 +192,20 @@ function ChatCoach() {
       };
     }
     const answer = response.answer || response.message || "";
-    const recommendations = Array.isArray(response.recommendations)
-      ? response.recommendations
-      : [];
-    const nextSteps = recommendations
-      .filter((rec) => rec && typeof rec === "object")
-      .map((rec) => {
-        const action = String(rec.action || "").trim();
-        const why = String(rec.why || "").trim();
-        const timeframe = String(rec.timeframe || "").trim();
-        const success = String(rec.success_metric || "").trim();
-        const priority = String(rec.priority || "").trim();
-        const meta = [];
-        if (why) meta.push(`Why: ${why}`);
-        if (timeframe) meta.push(`Timeframe: ${timeframe}`);
-        if (success) meta.push(`Success: ${success}`);
-        if (priority) meta.push(`Priority: ${priority}`);
-        const suffix = meta.length ? ` — ${meta.join("; ")}` : "";
-        return action ? `${action}${suffix}` : "";
-      })
-      .filter(Boolean);
+    const recommendations = Array.isArray(response.recommendations) ? response.recommendations : [];
+    const followUps = Array.isArray(response.follow_ups) ? response.follow_ups : [];
     const answerText = String(answer || "").trim() || "No response yet.";
-    const nextStepsText = nextSteps.length
-      ? ["Next steps (SMART):", ...nextSteps.map((step, index) => `${index + 1}. ${step}`)].join(
+    const followUpsText = followUps.length
+      ? ["Follow-up questions:", ...followUps.map((item, index) => `${index + 1}. ${item}`)].join(
           "\n"
         )
       : "";
     return {
-      answer: nextStepsText ? `${answerText}\n\n${nextStepsText}` : answerText,
+      answer: followUpsText ? `${answerText}\n\n${followUpsText}` : answerText,
       context: {
         reasoning: Array.isArray(response.reasoning_trace) ? response.reasoning_trace : [],
         recommendations,
-        followUps: Array.isArray(response.follow_ups) ? response.follow_ups : [],
+        followUps,
       },
     };
   }
