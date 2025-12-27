@@ -88,6 +88,7 @@ def call_llm(bundle, model: str) -> str:
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
     client = OpenAI(api_key=api_key)
+    max_tokens = int(os.getenv("OPENAI_MAX_TOKENS", "900"))
     response = client.chat.completions.create(
         model=model,
         messages=[
@@ -96,6 +97,7 @@ def call_llm(bundle, model: str) -> str:
             {"role": "user", "content": bundle.user},
         ],
         temperature=0.6,
+        max_tokens=max_tokens,
     )
     return response.choices[0].message.content or ""
 

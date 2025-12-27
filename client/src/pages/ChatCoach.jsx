@@ -20,7 +20,6 @@ function ChatCoach() {
   const [meetingLoading, setMeetingLoading] = useState(false);
   const [meetingError, setMeetingError] = useState("");
   const [activeContext, setActiveContext] = useState(null);
-  const [showImporter, setShowImporter] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [contextVisibility, setContextVisibility] = useState({});
   const bottomRef = useRef(null);
@@ -28,6 +27,12 @@ function ChatCoach() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  useEffect(() => {
+    if (!meetingOptions.length && !meetingLoading) {
+      loadMeetings();
+    }
+  }, [meetingOptions.length, meetingLoading]);
 
   async function loadMeetings() {
     setMeetingLoading(true);
@@ -310,27 +315,45 @@ function ChatCoach() {
         title="Health Coach"
         subtitle="Uses your wearable data and uploaded coaching sessions for context."
         action={
-          <div className="grid w-full grid-cols-1 items-center gap-3 md:grid-cols-3">
-            <div className="hidden md:block" />
-            <div className="flex justify-center">
+          <div className="flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                Persona
+              </span>
+              <select
+                value={currentPersonaId || ""}
+                onChange={(event) => setCurrentPersonaId(event.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+              >
+                {personas.map((persona) => (
+                  <option key={persona.id} value={persona.id}>
+                    {persona.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
                 <span className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Persona
+                  Meeting
                 </span>
                 <select
-                  value={currentPersonaId || ""}
-                  onChange={(event) => setCurrentPersonaId(event.target.value)}
+                  value={meetingId}
+                  onChange={(event) => setMeetingId(event.target.value)}
                   className="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none"
+                  disabled={meetingLoading || !meetingOptions.length}
                 >
-                  {personas.map((persona) => (
-                    <option key={persona.id} value={persona.id}>
-                      {persona.name}
-                    </option>
-                  ))}
+                  {meetingOptions.length ? (
+                    meetingOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No meetings found</option>
+                  )}
                 </select>
               </div>
-            </div>
-            <div className="flex items-center justify-center gap-2 md:justify-end">
               {activeContext ? (
                 <button
                   type="button"
@@ -343,51 +366,17 @@ function ChatCoach() {
               <button
                 type="button"
                 className="rounded-full bg-accent px-4 py-2 text-xs font-semibold text-white shadow-glow"
-                onClick={() => {
-                  setShowImporter((prev) => !prev);
-                  if (!meetingOptions.length) {
-                    loadMeetings();
-                  }
-                }}
+                onClick={importMeeting}
+                disabled={meetingLoading || !meetingId}
               >
-                Import meeting
+                {meetingLoading ? "Loading..." : "Import meeting"}
               </button>
             </div>
           </div>
         }
       />
 
-      {showImporter ? (
-        <div className="glass-card rounded-2xl p-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <select
-              value={meetingId}
-              onChange={(event) => setMeetingId(event.target.value)}
-              className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm"
-              disabled={meetingLoading || !meetingOptions.length}
-            >
-              {meetingOptions.length ? (
-                meetingOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))
-              ) : (
-                <option value="">No meetings found</option>
-              )}
-            </select>
-            <button
-              type="button"
-              onClick={importMeeting}
-              className="rounded-full bg-accent px-5 py-2 text-sm font-semibold text-white shadow-glow"
-              disabled={meetingLoading || !meetingId}
-            >
-              {meetingLoading ? "Loading..." : "Use meeting"}
-            </button>
-          </div>
-          {meetingError ? <p className="mt-3 text-xs text-rose-500">{meetingError}</p> : null}
-        </div>
-      ) : null}
+      {meetingError ? <p className="text-xs text-rose-500">{meetingError}</p> : null}
 
       {activeContext ? (
         <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/70 px-4 py-3 text-xs text-emerald-700">

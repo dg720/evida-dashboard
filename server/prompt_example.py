@@ -248,6 +248,8 @@ Your job:
 2) Use coaching goals/constraints as the PRIMARY intent.
 3) Use wearables metrics as evidence (data_references).
 4) Provide 3–6 SMART recommendations, prioritized.
+5) The answer must stand alone: include a clear action plan in the answer itself
+   (numbered or bulleted). Do not rely on other fields being shown.
 5) Ask up to 3 follow-ups only if essential.
 
 ROBUSTNESS RULES:
