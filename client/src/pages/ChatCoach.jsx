@@ -129,6 +129,60 @@ function ChatCoach() {
     });
   }
 
+  function formatCoachResponse(response) {
+    if (!response || typeof response !== "object") {
+      return "No response yet.";
+    }
+    const sections = [];
+    const answer = response.answer || response.message || "";
+    if (String(answer).trim()) {
+      sections.push(String(answer).trim());
+    }
+
+    if (Array.isArray(response.reasoning_trace) && response.reasoning_trace.length) {
+      const lines = response.reasoning_trace
+        .filter((line) => String(line).trim())
+        .map((line) => `- ${String(line).trim()}`);
+      if (lines.length) {
+        sections.push(["**What I'm seeing**", ...lines].join("\n"));
+      }
+    }
+
+    if (Array.isArray(response.recommendations) && response.recommendations.length) {
+      const lines = response.recommendations
+        .filter((rec) => rec && typeof rec === "object")
+        .map((rec) => {
+          const action = String(rec.action || "").trim();
+          const why = String(rec.why || "").trim();
+          const timeframe = String(rec.timeframe || "").trim();
+          const success = String(rec.success_metric || "").trim();
+          const priority = String(rec.priority || "").trim();
+          const meta = [];
+          if (priority) meta.push(priority);
+          if (timeframe) meta.push(timeframe);
+          if (success) meta.push(`Success: ${success}`);
+          if (why) meta.push(why);
+          const suffix = meta.length ? ` — ${meta.join("; ")}` : "";
+          return action ? `- ${action}${suffix}` : "";
+        })
+        .filter(Boolean);
+      if (lines.length) {
+        sections.push(["**Next steps (SMART)**", ...lines].join("\n"));
+      }
+    }
+
+    if (Array.isArray(response.follow_ups) && response.follow_ups.length) {
+      const lines = response.follow_ups
+        .filter((line) => String(line).trim())
+        .map((line) => `- ${String(line).trim()}`);
+      if (lines.length) {
+        sections.push(["**Follow-up questions**", ...lines].join("\n"));
+      }
+    }
+
+    return sections.length ? sections.join("\n\n") : "No response yet.";
+  }
+
   async function handleSend() {
     if (!input.trim()) {
       return;
@@ -160,9 +214,10 @@ function ChatCoach() {
           meeting_context: meetingPayload,
         }),
       });
+      const formattedResponse = formatCoachResponse(response);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: response.message || "No response yet." },
+        { role: "assistant", content: formattedResponse },
       ]);
     } catch {
       setMessages((prev) => [
