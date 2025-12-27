@@ -46,7 +46,7 @@ function Home() {
               type="button"
               onClick={() => setCurrentPersonaId(persona.id)}
               className={[
-                "glass-card flex flex-col gap-3 rounded-2xl p-6 text-left transition",
+                "glass-card flex flex-col gap-3 rounded-2xl p-6 text-left transition relative",
                 currentPersonaId === persona.id
                   ? "ring-2 ring-accent"
                   : "hover:-translate-y-1 hover:shadow-glow",
@@ -56,6 +56,11 @@ function Home() {
                 <p className="font-display text-xl font-semibold text-ink">{persona.name}</p>
               </div>
               <p className="text-sm text-slate-600">{persona.description}</p>
+              {currentPersonaId === persona.id ? (
+                <span className="absolute right-4 top-4 rounded-full bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-accentDeep">
+                  Active
+                </span>
+              ) : null}
             </button>
           ))}
         </div>

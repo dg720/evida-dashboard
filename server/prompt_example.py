@@ -152,6 +152,7 @@ RESPONSE_SCHEMA: Dict[str, Any] = {
     "properties": {
         "answer": {
             "type": "string",
+            "minLength": 1,
             "description": "User-facing response. Clear, minimal, non-alarming. No diagnosis. Include brief disclaimer if relevant.",
         },
         "message": {

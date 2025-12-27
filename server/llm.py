@@ -64,6 +64,29 @@ def safe_fallback_response() -> dict[str, Any]:
     }
 
 
+def coalesce_blank_answer(payload: dict[str, Any]) -> dict[str, Any]:
+    answer = str(payload.get("answer") or "").strip()
+    if answer:
+        return payload
+    recommendations = payload.get("recommendations") or []
+    if isinstance(recommendations, list) and recommendations:
+        actions = []
+        for rec in recommendations:
+            if not isinstance(rec, dict):
+                continue
+            action = str(rec.get("action") or "").strip()
+            if action:
+                actions.append(action)
+        if actions:
+            summary = "Here are the most relevant next steps based on your data:"
+            payload["answer"] = summary + "\n\n" + "\n".join(f"- {action}" for action in actions[:5])
+            payload["message"] = payload["answer"]
+            return payload
+    payload["answer"] = "I couldn't generate a complete response. Please try again."
+    payload["message"] = payload["answer"]
+    return payload
+
+
 def validate_against_schema(payload: dict[str, Any], schema: dict[str, Any]) -> None:
     jsonschema.validate(instance=payload, schema=schema)
 
@@ -148,6 +171,7 @@ async def generate_coach_response(
     try:
         raw = call_llm(bundle, model)
         payload = ensure_message_alias(parse_json_response(raw))
+        payload = coalesce_blank_answer(payload)
         validate_against_schema(payload, response_schema)
         return payload
     except Exception:
